@@ -1,0 +1,97 @@
+models:
+    - 
+        dll_name: CarPhyModel.dll
+        model_name: phy
+        output_movable: true
+    - 
+        dll_name: cq_interpreter.dll
+        model_name: beh
+        output_movable: false
+init_convert:
+    - 
+        name: longitude
+        to: phy
+    - 
+        name: latitude
+        to: phy
+    - 
+        name: altitude
+        to: phy
+input_convert: 
+    - 
+        name: FireID
+        to: phy
+    - 
+        name: FireData
+        to: phy
+    - 
+        name: EntityInfo
+        to: phy
+output_convert:
+    - 
+        name: VID
+        from: phy
+    - 
+        name: FireDataOut
+        from: phy
+    - 
+        name: EntityInfoOut
+        from: phy
+    - 
+        name: roll
+        from: phy
+    - 
+        name: yaw
+        from: phy
+    - 
+        name: pitch
+        from: phy
+    - 
+        name: roll
+        from: phy
+        to: beh
+    - 
+        name: yaw
+        from: phy
+        to: beh
+    - 
+        name: pitch
+        from: phy
+        to: beh
+    - 
+        name: longitude
+        from: phy
+    - 
+        name: latitude
+        from: phy
+    - 
+        name: altitude
+        from: phy
+    - 
+        src_name: ActionId
+        dst_name: Command
+        from: beh
+        to: phy
+    - 
+        name: Param1
+        from: beh
+        to: phy
+    - 
+        name: Param2
+        from: beh
+        to: phy
+    - 
+        src_name: EntityInfoOut
+        dst_name: selfInfo
+        from: phy
+        to: beh
+    - 
+        src_name: weaponInfoOut
+        dst_name: weaponInfo
+        from: phy
+        to: beh
+    - 
+        src_name: scannedInfoOut
+        dst_name: scannedInfo
+        from: phy
+        to: beh
