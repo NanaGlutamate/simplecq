@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <expected>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -17,27 +18,30 @@ struct ModelDllInterface {
     using DestoryModelFunction = auto (*)(void *, bool) -> void;
     CreateModelFunction createFunc;
     DestoryModelFunction destoryFunc;
-    explicit ModelDllInterface(const std::string &dllPath) {
-#ifdef _WIN32
-        auto hmodule = LoadLibraryExA(dllPath.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
-#else  // _WIN32
-        void *hmodule = dlopen(lib_path_.c_str(), RTLD_LAZY | RTLD_GLOBAL);
-#endif // _WIN32
-        if (!hmodule) {
-            std::terminate();
-        }
-#ifdef _WIN32
-        createFunc = (auto (*)()->CSModelObject *)GetProcAddress(hmodule, "CreateModelObject");
-        destoryFunc = (auto (*)(void *, bool)->void)GetProcAddress(hmodule, "DestroyMemory");
-#else  // _WIN32
-        createFunc = (auto (*)()->CSModelObject *)dlsym(hmodule, "CreateModelObject");
-        destoryFunc = (auto (*)(void *, bool)->void)dlsym(hmodule, "DestroyMemory");
-#endif // _WIN32
-        if (!createFunc || !destoryFunc) {
-            std::terminate();
-        }
-    }
 };
+
+inline std::expected<ModelDllInterface, std::string_view> loadDll(const std::string &dllPath) {
+    ModelDllInterface mi;
+#ifdef _WIN32
+    auto hmodule = LoadLibraryExA(dllPath.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+#else  // _WIN32
+    void *hmodule = dlopen(lib_path_.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+#endif // _WIN32
+    if (!hmodule) {
+        return std::unexpected("load dll error");
+    }
+#ifdef _WIN32
+    mi.createFunc = (auto (*)()->CSModelObject *)GetProcAddress(hmodule, "CreateModelObject");
+    mi.destoryFunc = (auto (*)(void *, bool)->void)GetProcAddress(hmodule, "DestroyMemory");
+#else  // _WIN32
+    mi.createFunc = (auto (*)()->CSModelObject *)dlsym(hmodule, "CreateModelObject");
+    mi.destoryFunc = (auto (*)(void *, bool)->void)dlsym(hmodule, "DestroyMemory");
+#endif // _WIN32
+    if (!mi.createFunc || !mi.destoryFunc) {
+        return std::unexpected("load function error");
+    }
+    return mi;
+}
 
 inline std::string getLibDir() {
     std::string library_dir_;

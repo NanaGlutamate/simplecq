@@ -1,0 +1,26 @@
+model_type:
+    -
+        model_type_name: car
+        dir_name: car
+        dll_name: mymodel.dll
+models:
+    -
+        model_type: car
+        side_id: 0
+        init_value: "<></>"
+topic:
+    - 
+        src_model_type: car
+        members:
+            - VID
+            - FireDataOut
+        subscribers:
+            - 
+                dst_model_type: car
+                name_convert:
+                    -
+                        from: VID
+                        to: FireID
+                    - 
+                        from: FireDataOut
+                        to: FireData

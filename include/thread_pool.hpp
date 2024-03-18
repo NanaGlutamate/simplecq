@@ -40,8 +40,8 @@ struct ThreadPool {
             }
             task = std::move(tasks.front());
             tasks.pop_front();
-            cv_wait.notify_all();
         }
+        cv_wait.notify_all();
         task();
         return true;
     }

@@ -1,3 +1,5 @@
+config:
+    profile: "D:/Desktop/FinalProj/Code/simplecq/config"
 models:
     - 
         dll_name: CarPhyModel.dll
@@ -28,6 +30,9 @@ input_convert:
         name: EntityInfo
         to: phy
 output_convert:
+    - 
+        name: State
+        from: phy
     - 
         name: VID
         from: phy
