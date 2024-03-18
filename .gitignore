@@ -2,6 +2,7 @@
 /build/
 /out/
 /.vs/
-!/src/**
-!/include/**
-!/config/**
+/config/profile.txt
+# !/src/**
+# !/include/**
+# !/config/**

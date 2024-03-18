@@ -17,6 +17,7 @@
 #include "csmodel_base.h"
 #include "dllop.hpp"
 #include "profile.hpp"
+#include "datatransform.hpp"
 
 namespace {
 
@@ -25,70 +26,6 @@ using namespace std::literals;
 using CSValueMap = std::unordered_map<std::string, std::any>;
 
 } // namespace
-
-struct ModelInfo {
-    // ModelInfo(const ModelInfo &) = delete;
-    // ModelInfo &operator=(const ModelInfo &) = delete;
-    //~ModelInfo() {
-    //     if (obj) {
-    //         dll.destoryFunc(obj, false);
-    //     }
-    //     obj = nullptr;
-    // }
-    ModelDllInterface dll;
-    CSModelObject *obj;
-    bool outputDataMovable = false;
-};
-
-std::expected<ModelInfo, std::string_view> loadModel(const std::string &dllName) {
-    return loadDll(dllName).and_then([](ModelDllInterface dll) -> std::expected<ModelInfo, std::string_view> {
-        ModelInfo info;
-        info.dll = dll;
-        info.obj = dll.createFunc();
-        return info;
-    });
-}
-
-struct TransformInfo {
-    struct Action {
-        std::string to, dstName;
-    };
-    struct InputBuffer {
-        std::string name;
-        CSValueMap *buffer;
-        bool movable;
-    };
-    // from, srcname
-    std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Action>>> rules;
-    std::unordered_map<std::string, CSValueMap> transform(std::span<InputBuffer> buffers) {
-        std::unordered_map<std::string, CSValueMap> ret;
-        for (auto &&[bufferName, data, movable] : buffers) {
-            if (auto it = rules.find(bufferName); it != rules.end()) {
-                for (auto &&[name, value] : *data) {
-                    if (auto it2 = it->second.find(name); it2 != it->second.end()) {
-                        auto &actions = it2->second;
-                        assert(actions.size());
-                        // if (actions.empty()) {
-                        //     continue;
-                        // }
-                        auto size = actions.size();
-                        if (movable) {
-                            for (size_t i = 0; i < size - 1; ++i) {
-                                ret[actions[i].to][actions[i].dstName] = value;
-                            }
-                            ret[actions[size - 1].to][actions[size - 1].dstName] = std::move(value);
-                        } else {
-                            for (size_t i = 0; i < size; ++i) {
-                                ret[actions[i].to][actions[i].dstName] = value;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return ret;
-    }
-};
 
 class MyAssembledModel : public CSModelObject {
   public:
@@ -137,13 +74,17 @@ class MyAssembledModel : public CSModelObject {
         if (config["config"]) {
             auto n = config["config"];
             if (n["profile"]) {
-                profile = n["profile"].as<std::string>();
+                profileFile = n["profile"].as<std::string>();
             }
         }
         // fkyaml::node config = fkyaml::node::deserialize(configFile);
         for (auto &&model : config["models"]) {
             auto name = model["model_name"].as<std::string>();
-            auto modelObj = loadModel(location + model["dll_name"].as<std::string>());
+            auto dllName = model["dll_name"].as<std::string>();
+            if (dllName.starts_with("./") || (!dllName.contains('/') && !dllName.contains('\\'))) {
+                dllName = location + dllName;
+            }
+            auto modelObj = loadModel(dllName);
             if (!modelObj.has_value()) {
                 auto errorInfo = std::format("[AssembledModel] error when loading [{}]: ", name);
                 errorInfo += modelObj.error();
@@ -189,9 +130,9 @@ class MyAssembledModel : public CSModelObject {
     };
 
     virtual bool Tick(double time) override {
-        auto p = profiler.startRecord("tick");
 
-        for (auto &&[_, modelInfo] : subModels) {
+        for (auto &&[modelName, modelInfo] : subModels) {
+            auto p = profiler.startRecord(modelName + ": tick");
             modelInfo.obj->Tick(time);
         }
 
@@ -199,13 +140,14 @@ class MyAssembledModel : public CSModelObject {
     };
 
     virtual bool SetInput(const std::unordered_map<std::string, std::any> &value) override {
-        auto p1 = profiler.startRecord("before_input");
+        auto p1 = profiler.startRecord("root: before_input");
         std::array<TransformInfo::InputBuffer, 1> buffers{
             TransformInfo::InputBuffer{"root", const_cast<CSValueMap *>(&value), false}};
         auto data = input.transform(buffers);
 
-        auto p2 = profiler.startRecord("input", &p1);
+        p1.end();
         for (auto &&[modelName, inputData] : data) {
+            auto p2 = profiler.startRecord(modelName + ": input");
             subModels.find(modelName)->second.obj->SetInput(inputData);
         }
 
@@ -213,7 +155,7 @@ class MyAssembledModel : public CSModelObject {
     };
 
     virtual std::unordered_map<std::string, std::any> *GetOutput() override {
-        auto p1 = profiler.startRecord("before_output");
+        auto p1 = profiler.startRecord("root: before_output");
         // set ID
         if (!realInited) {
             for (auto &[name, modelInfo] : subModels) {
@@ -231,13 +173,14 @@ class MyAssembledModel : public CSModelObject {
         std::vector<TransformInfo::InputBuffer> buffers;
         buffers.reserve(subModels.size());
 
-        auto p2 = profiler.startRecord("output", &p1);
+        p1.end();
 
         for (auto &&[modelName, modelInfo] : subModels) {
+            auto p2 = profiler.startRecord(modelName + ": output");
             buffers.emplace_back(modelName, modelInfo.obj->GetOutput(), modelInfo.outputDataMovable);
         }
 
-        auto p3 = profiler.startRecord("after_output", &p2);
+        auto p3 = profiler.startRecord("root: after_output");
 
         auto data = output.transform(buffers);
 
@@ -252,16 +195,24 @@ class MyAssembledModel : public CSModelObject {
         outputBuffer.emplace("InstanceName", GetInstanceName());
         outputBuffer.emplace("ID", GetID());
         outputBuffer.emplace("State", uint16_t(GetState()));
+        if (auto it = outputBuffer.find("yaw"); it != outputBuffer.end()) {
+            auto showedYaw = std::any_cast<double>(it->second);
+            showedYaw += 90;
+            it->second = showedYaw;
+        }
+
+        p3.end();
 
         for (auto &&[modelName, inputData] : data) {
+            auto p2 = profiler.startRecord(modelName + ": innerinput");
             subModels.find(modelName)->second.obj->SetInput(inputData);
         }
 
         return &outputBuffer;
     };
     ~MyAssembledModel() {
-        if (!profile.empty()) {
-            std::ofstream ofs(profile);
+        if (!profileFile.empty()) {
+            std::ofstream ofs(profileFile);
             ofs << profiler.getResult() << std::endl;
         }
     }
@@ -269,8 +220,8 @@ class MyAssembledModel : public CSModelObject {
   private:
     bool realInited = false;
 
-    Profiler profiler{"before_input", "input", "before_output", "output", "after_output", "tick"};
-    std::string profile;
+    Profiler profiler;
+    std::string profileFile;
     CSValueMap outputBuffer;
     TransformInfo input, output;
     std::unordered_map<std::string, ModelInfo> subModels;

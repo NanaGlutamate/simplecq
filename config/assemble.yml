@@ -1,12 +1,12 @@
 config:
-    profile: "D:/Desktop/FinalProj/Code/simplecq/config"
+    profile: "D:/Desktop/FinalProj/Code/simplecq/config/profile.txt"
 models:
     - 
-        dll_name: CarPhyModel.dll
+        dll_name: "D:/Desktop/FinalProj/Code/simplecq/bin/RelWithDebInfo/CarPhyModel.dll"
         model_name: phy
         output_movable: true
     - 
-        dll_name: cq_interpreter.dll
+        dll_name: "D:/Desktop/FinalProj/Code/simplecq/bin/RelWithDebInfo/cq_interpreter.dll"
         model_name: beh
         output_movable: false
 init_convert:

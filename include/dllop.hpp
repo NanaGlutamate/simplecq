@@ -66,3 +66,18 @@ inline std::string getLibDir() {
 #endif
     return library_dir_;
 }
+
+struct ModelInfo {
+    ModelDllInterface dll;
+    CSModelObject *obj;
+    bool outputDataMovable = false;
+};
+
+std::expected<ModelInfo, std::string_view> loadModel(const std::string &dllName) {
+    return loadDll(dllName).and_then([](ModelDllInterface dll) -> std::expected<ModelInfo, std::string_view> {
+        ModelInfo info;
+        info.dll = dll;
+        info.obj = dll.createFunc();
+        return info;
+    });
+}
