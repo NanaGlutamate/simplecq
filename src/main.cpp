@@ -1,13 +1,29 @@
 #include <format>
 #include <iostream>
 
-#include "unifex/any_scheduler.hpp"
+#include <taskflow/taskflow.hpp>
 
 #include "csmodel_base.h"
 #include "thread_pool.hpp"
 
 int main() {
     using namespace cq;
+
+    tf::Executor executor;
+    tf::Taskflow taskflow;
+
+    auto [A, B, C, D] = taskflow.emplace( // create four tasks
+        [] { std::cout << "TaskA\n"
+                       << std::endl; }, [] { std::cout << "TaskB\n"
+                                                                    << std::endl; },
+        [] { std::cout << "TaskC\n"
+                       << std::endl; }, [] { std::cout << "TaskD\n"
+                                                                    << std::endl; });
+
+    A.precede(B, C); // A runs before B and C
+    D.succeed(B, C); // D runs after  B and C
+
+    executor.run(taskflow).wait();
     // std::cout << std::format("[main]: {1}", std::this_thread::get_id(), "post") << std::endl;
     // {
     //     std::mutex mtx;

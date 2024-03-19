@@ -1,7 +1,8 @@
 syntax = "proto3";
 
 service CQAgent {
-    rpc SendOutput(OutputRequest) returns (OutputReply) {}
+    rpc GetOutput(OutputRequest) returns (OutputReply) {}
+    rpc SendInput(InputRequest) returns (InputReply) {}
 }
 
 message OutputRequest {
@@ -9,5 +10,13 @@ message OutputRequest {
 }
 
 message OutputReply {
+    bool success = 1;
+}
+
+message InputRequest {
     string message = 1;
+}
+
+message InputReply {
+    bool success = 1;
 }
