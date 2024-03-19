@@ -1,6 +1,8 @@
 file(GLOB_RECURSE YAML_SRC ${CMAKE_CURRENT_SOURCE_DIR}/yaml-cpp/**.cpp)
 file(GLOB_RECURSE GRPC_GEN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/agentrpc/**.cc)
 
+# message(STATUS ${GRPC_GEN_SRC})
+
 add_subdirectory(agentrpc)
 
 add_executable(main main.cpp)
@@ -14,7 +16,7 @@ add_dependencies(test mymodel)
 add_dependencies(mymodel yaml)
 add_dependencies(tinycq yaml)
 
-target_link_libraries(mymodel yaml)
+target_link_libraries(mymodel yaml ws2_32)
 target_link_libraries(tinycq yaml)
 
 find_package(gRPC CONFIG REQUIRED)

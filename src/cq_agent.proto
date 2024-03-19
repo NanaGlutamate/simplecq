@@ -6,15 +6,16 @@ service CQAgent {
 }
 
 message OutputRequest {
-    string message = 1;
-}
-
-message OutputReply {
     bool success = 1;
 }
 
-message InputRequest {
+message OutputReply {
     string message = 1;
+}
+
+message InputRequest {
+    bool finish = 1;
+    string message = 2;
 }
 
 message InputReply {

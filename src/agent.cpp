@@ -11,11 +11,19 @@
 #include <span>
 #include <string>
 #include <unordered_map>
+#include <mutex>
 
 #include <assert.h>
 
-#include "agentrpc/cq_agent.pb.h"
+// #include <grpc/grpc.h>
+// #include <grpcpp/channel.h>
+// #include <grpcpp/client_context.h>
+// #include <grpcpp/create_channel.h>
+// #include <grpcpp/security/credentials.h>
 
+// #include "agentrpc/cq_agent.pb.h"
+
+#include "mysock.hpp"
 #include "csmodel_base.h"
 #include "printcsvaluemap.hpp"
 #include "parseany.hpp"
@@ -26,45 +34,57 @@ using namespace std::literals;
 
 using CSValueMap = std::unordered_map<std::string, std::any>;
 
+constexpr auto host = "127.0.0.1";
+constexpr auto port = 50023;
+
 } // namespace
 
 class AgentModel : public CSModelObject {
   public:
     AgentModel() = default;
     virtual bool Init(const CSValueMap &value) override {
+        static bool inited = false;
+        static std::mutex mtx;
+        std::unique_lock lock{mtx};
+        if (inited) {
+            return false;
+        }
+        inited = true;
         SetState(CSInstanceState::IS_INITIALIZED);
-        return true;
+        return l.link(host, port);
     };
 
     virtual bool Tick(double time) override {
-        // send: input end
+        auto s = tools::myany::printAnyToString<tools::myany::PythonFormat>(std::move(inputBuffer));
+        inputBuffer.clear();
+        l.sendValue(s);
         return true;
     };
 
     virtual bool SetInput(const CSValueMap &value) override {
-        auto s = tools::myany::printCSValueMapToString<tools::myany::PythonFormat>(value);
-        // send
+        inputBuffer.push_back(value);
         return true;
     };
 
     virtual CSValueMap *GetOutput() override {
         SetState(CSInstanceState::IS_RUNNING);
-        std::string s;
-        // recv
+        std::string s = l.getValue();
         auto v = tools::myany::parseXMLString(s).transform_error([this](auto err){
             this->WriteLog(std::format("parse error: {}", err), 4);
             return CSValueMap{};
         }).value();
-        buffer = std::any_cast<CSValueMap>(std::move(v));
-        buffer.emplace("ForceSideID", GetForceSideID());
-        buffer.emplace("ModelID", GetModelID());
-        buffer.emplace("InstanceName", GetInstanceName());
-        buffer.emplace("ID", GetID());
-        buffer.emplace("State", uint16_t(GetState()));
-        return &buffer;
+        outputBuffer = std::any_cast<CSValueMap>(std::move(v));
+        outputBuffer.emplace("ForceSideID", GetForceSideID());
+        outputBuffer.emplace("ModelID", GetModelID());
+        outputBuffer.emplace("InstanceName", GetInstanceName());
+        outputBuffer.emplace("ID", GetID());
+        outputBuffer.emplace("State", uint16_t(GetState()));
+        return &outputBuffer;
     };
   private:
-    CSValueMap buffer;
+    Link l;
+    std::vector<std::any> inputBuffer;
+    CSValueMap outputBuffer;
 };
 
 extern "C" {

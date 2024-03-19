@@ -81,6 +81,16 @@
         "chrono": "cpp",
         "expected": "cpp",
         "forward_list": "cpp",
-        "source_location": "cpp"
+        "source_location": "cpp",
+        "*.ipp": "cpp",
+        "codecvt": "cpp",
+        "condition_variable": "cpp",
+        "coroutine": "cpp",
+        "csignal": "cpp",
+        "cstdarg": "cpp",
+        "future": "cpp",
+        "numeric": "cpp",
+        "random": "cpp",
+        "variant": "cpp"
     }
 }
