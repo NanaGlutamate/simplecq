@@ -80,6 +80,7 @@
         "unordered_set": "cpp",
         "chrono": "cpp",
         "expected": "cpp",
-        "forward_list": "cpp"
+        "forward_list": "cpp",
+        "source_location": "cpp"
     }
 }

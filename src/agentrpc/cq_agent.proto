@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+service CQAgent {
+    rpc SendOutput(OutputRequest) returns (OutputReply) {}
+}
+
+message OutputRequest {
+    string message = 1;
+}
+
+message OutputReply {
+    string message = 1;
+}

@@ -1,5 +1,6 @@
 config:
     profile: "D:/Desktop/FinalProj/Code/simplecq/config/profile.txt"
+    restart_key: restart
 models:
     - 
         dll_name: "D:/Desktop/FinalProj/Code/simplecq/bin/RelWithDebInfo/CarPhyModel.dll"

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <string>
 #include <expected>
+#include <string>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -68,9 +68,21 @@ inline std::string getLibDir() {
 }
 
 struct ModelInfo {
-    ModelDllInterface dll;
-    CSModelObject *obj;
+    ModelDllInterface dll{nullptr, nullptr};
+    CSModelObject *obj = nullptr;
     bool outputDataMovable = false;
+    ModelInfo() = default;
+    ModelInfo(const ModelInfo &) = delete;
+    ModelInfo(ModelInfo &&o) : dll(o.dll) {
+        obj = o.obj;
+        outputDataMovable = o.outputDataMovable;
+        o.obj = nullptr;
+    }
+    ~ModelInfo() {
+        if (obj) {
+            dll.destoryFunc(obj, false);
+        }
+    }
 };
 
 std::expected<ModelInfo, std::string_view> loadModel(const std::string &dllName) {

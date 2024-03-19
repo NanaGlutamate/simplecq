@@ -15,9 +15,9 @@
 #include <assert.h>
 
 #include "csmodel_base.h"
+#include "datatransform.hpp"
 #include "dllop.hpp"
 #include "profile.hpp"
-#include "datatransform.hpp"
 
 namespace {
 
@@ -76,6 +76,12 @@ class MyAssembledModel : public CSModelObject {
             if (n["profile"]) {
                 profileFile = n["profile"].as<std::string>();
             }
+            if (n["restart_key"]) {
+                restartKey = n["restart_key"].as<std::string>();
+                if (&value != &initValue) {
+                    initValue = value;
+                }
+            }
         }
         // fkyaml::node config = fkyaml::node::deserialize(configFile);
         for (auto &&model : config["models"]) {
@@ -91,7 +97,7 @@ class MyAssembledModel : public CSModelObject {
                 WriteLog(errorInfo, 4);
                 return false;
             }
-            subModels.emplace(name, *modelObj);
+            subModels.emplace(name, std::move(*modelObj));
             if (model["output_movable"]) {
                 subModels.find(name)->second.outputDataMovable = model["output_movable"].as<bool>();
             }
@@ -130,6 +136,9 @@ class MyAssembledModel : public CSModelObject {
     };
 
     virtual bool Tick(double time) override {
+        if (restartFlag) {
+            return true;
+        }
 
         for (auto &&[modelName, modelInfo] : subModels) {
             auto p = profiler.startRecord(modelName + ": tick");
@@ -140,6 +149,11 @@ class MyAssembledModel : public CSModelObject {
     };
 
     virtual bool SetInput(const std::unordered_map<std::string, std::any> &value) override {
+        if (restartFlag || (restartKey.size() && value.contains(restartKey))) {
+            restartFlag = true;
+            return true;
+        }
+
         auto p1 = profiler.startRecord("root: before_input");
         std::array<TransformInfo::InputBuffer, 1> buffers{
             TransformInfo::InputBuffer{"root", const_cast<CSValueMap *>(&value), false}};
@@ -155,6 +169,10 @@ class MyAssembledModel : public CSModelObject {
     };
 
     virtual std::unordered_map<std::string, std::any> *GetOutput() override {
+        if (restartFlag) {
+            restart();
+        }
+
         auto p1 = profiler.startRecord("root: before_output");
         // set ID
         if (!realInited) {
@@ -195,11 +213,6 @@ class MyAssembledModel : public CSModelObject {
         outputBuffer.emplace("InstanceName", GetInstanceName());
         outputBuffer.emplace("ID", GetID());
         outputBuffer.emplace("State", uint16_t(GetState()));
-        if (auto it = outputBuffer.find("yaw"); it != outputBuffer.end()) {
-            auto showedYaw = std::any_cast<double>(it->second);
-            showedYaw += 90;
-            it->second = showedYaw;
-        }
 
         p3.end();
 
@@ -219,9 +232,20 @@ class MyAssembledModel : public CSModelObject {
 
   private:
     bool realInited = false;
+    void restart() {
+        profileFile.clear();
+        restartKey.clear();
+        restartFlag = false;
+        input.rules.clear();
+        output.rules.clear();
+        subModels.clear();
+        Init(initValue);
+    }
 
     Profiler profiler;
-    std::string profileFile;
+    std::string profileFile, restartKey;
+    bool restartFlag = false;
+    CSValueMap initValue;
     CSValueMap outputBuffer;
     TransformInfo input, output;
     std::unordered_map<std::string, ModelInfo> subModels;

@@ -176,7 +176,7 @@
             <Param name="realyaw" type="float64">
                 <Value>
                     <Expression>
-                        yaw * 3.1415926 / 180 + 3.1415926 / 2
+                        yaw * 3.1415926 / 180
                     </Expression>
                 </Value>
             </Param>

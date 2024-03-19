@@ -69,7 +69,7 @@ struct Profiler {
                 rate = 1000;
                 s = "ms";
             }
-            ans.emplace_back(t, std::format("[{:>{}}]: {:10.4} {} / {:10} times = {:10.3}\n", name, max_size + 1,
+            ans.emplace_back(t, std::format("[{:<{}}]: {:10.4} {} / {:10} times = {:10.3}\n", name, max_size + 1,
                                             double(t) / rate, s, log.times, double(t) / double(log.times)));
         }
         std::sort(ans.begin(), ans.end(), [](const auto &l, const auto &r) { return std::get<0>(l) > std::get<0>(r); });

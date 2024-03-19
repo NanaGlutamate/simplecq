@@ -15,10 +15,14 @@
 #pragma once
 
 #include <any>
+#include <expected>
+#include <format>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
+#include <cstring>
 
 #include "printcsvaluemap.hpp"
 #include "rapidxml-1.13/rapidxml.hpp"
@@ -37,20 +41,24 @@ struct XMLFormat {
 
 std::string toXML(const std::any &v) { return printAnyToString<XMLFormat>(v); }
 
-std::any parseXML(rapidxml::xml_node<char> *node) {
+enum struct parseError {
+    different_type_in_same_list,
+    unknown_type,
+};
+
+std::expected<std::any, parseError> parseXML(rapidxml::xml_node<char> *node) {
     using namespace std;
     using namespace literals;
-    struct A {};
     if (node->name() == "li"sv) {
         vector<any> ret;
         auto tmp = node->first_node();
         if (!tmp) {
             return std::move(ret);
         }
-        string_view type{ tmp->name(), tmp->name_size() };
+        string_view type{tmp->name(), tmp->name_size()};
         for (auto p = node->first_node(); p; p = p->next_sibling()) {
             if (p->name() != type) {
-                return A{};
+                return parseError::different_type_in_same_list;
             }
             ret.push_back(parseXML(p));
         }
@@ -88,8 +96,32 @@ std::any parseXML(rapidxml::xml_node<char> *node) {
             return double(stof(value));
         if (type == "string"sv)
             return string{value};
-        return std::any(A{});
+        return parseError::unknown_type;
     }
 }
 
+std::expected<std::any, parseError> parseXMLString(const std::string &node) {
+    size_t strLen = node.size() + 1;
+    auto buffer = std::make_unique<char[]>(strLen);
+    memcpy(buffer.get(), node.c_str(), strLen);
+    rapidxml::xml_document<> doc;
+    doc.parse<rapidxml::parse_default>(buffer.get());
+    auto root = doc.first_node();
+    return parseXML(root);
+}
+
 } // namespace tools::myany
+
+template <>
+struct std::formatter<tools::myany::parseError, char> {
+    template <class ParseContext> constexpr ParseContext::iterator parse(ParseContext &ctx) { return ctx.begin(); }
+
+    template <class FmtContext> FmtContext::iterator format(tools::myany::parseError err, FmtContext &ctx) const {
+        std::ostringstream out;
+        if (err == tools::myany::parseError::different_type_in_same_list)
+            out << "[different_type_in_same_list]";
+        else
+            out << "[unknown_type]";
+        return std::ranges::copy(std::move(out).str(), ctx.out()).out;
+    }
+};
