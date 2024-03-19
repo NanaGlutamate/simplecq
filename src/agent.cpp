@@ -14,6 +14,8 @@
 
 #include <assert.h>
 
+#include "agentrpc/cq_agent.pb.h"
+
 #include "csmodel_base.h"
 #include "printcsvaluemap.hpp"
 #include "parseany.hpp"

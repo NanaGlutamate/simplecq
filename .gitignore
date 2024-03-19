@@ -3,6 +3,8 @@
 /out/
 /.vs/
 /config/profile.txt
+*.pb.h
+*.pb.cc
 # !/src/**
 # !/include/**
 # !/config/**
