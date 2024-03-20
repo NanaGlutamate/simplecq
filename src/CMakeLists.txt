@@ -19,8 +19,8 @@ add_dependencies(tinycq yaml)
 target_link_libraries(mymodel yaml ws2_32)
 target_link_libraries(tinycq yaml)
 
-find_package(gRPC CONFIG REQUIRED)
-target_link_libraries(agent gRPC::grpc++)
+# find_package(gRPC CONFIG REQUIRED)
+# target_link_libraries(agent gRPC::grpc++)
 
 if(UNIX)
     target_link_libraries(mymodel dl)

@@ -12,92 +12,66 @@ models:
         output_movable: false
 init_convert:
     - 
-        name: longitude
         to: phy
+        values: 
+            - {name: longitude}
+            - {name: latitude}
+            - {name: altitude}
     - 
-        name: latitude
-        to: phy
-    - 
-        name: altitude
-        to: phy
+        to: beh
+        values:
+            - {name: filePath}
+            - {name: enableLog}
 input_convert: 
     - 
-        name: FireID
         to: phy
+        values:
+            - {name: FireID}
+            - {name: FireData}
+            - {name: EntityInfo}
     - 
-        name: FireData
-        to: phy
-    - 
-        name: EntityInfo
-        to: phy
+        to: beh
+        values:
+            - {name: targetPos}
+            - {name: enableFire}
+            - {name: formationID}
+            - {name: fireTarget}
 output_convert:
     - 
-        name: State
         from: phy
+        values:
+            - {name: State}
+            - {name: VID}
+            - {name: FireDataOut}
+            - {name: EntityInfoOut}
+            - {name: roll}
+            - {name: yaw}
+            - {name: pitch}
+            - {name: longitude}
+            - {name: latitude}
+            - {name: altitude}
     - 
-        name: VID
-        from: phy
-    - 
-        name: FireDataOut
-        from: phy
-    - 
-        name: EntityInfoOut
-        from: phy
-    - 
-        name: roll
-        from: phy
-    - 
-        name: yaw
-        from: phy
-    - 
-        name: pitch
-        from: phy
-    - 
-        name: roll
         from: phy
         to: beh
+        values:
+            - {name: roll}
+            - {name: yaw}
+            - {name: pitch}
+            -
+                src_name: EntityInfoOut
+                dst_name: selfInfo
+            - 
+                src_name: scannedInfoOut
+                dst_name: scannedInfo
+            # - 
+            #     src_name: weaponInfoOut
+            #     dst_name: weaponInfo
     - 
-        name: yaw
-        from: phy
-        to: beh
-    - 
-        name: pitch
-        from: phy
-        to: beh
-    - 
-        name: longitude
-        from: phy
-    - 
-        name: latitude
-        from: phy
-    - 
-        name: altitude
-        from: phy
-    - 
-        src_name: ActionId
-        dst_name: Command
         from: beh
         to: phy
-    - 
-        name: Param1
-        from: beh
-        to: phy
-    - 
-        name: Param2
-        from: beh
-        to: phy
-    - 
-        src_name: EntityInfoOut
-        dst_name: selfInfo
-        from: phy
-        to: beh
-    - 
-        src_name: weaponInfoOut
-        dst_name: weaponInfo
-        from: phy
-        to: beh
-    - 
-        src_name: scannedInfoOut
-        dst_name: scannedInfo
-        from: phy
-        to: beh
+        values:
+            - {name: Param1}
+            - {name: Param2}
+            -
+                src_name: ActionId
+                dst_name: Command

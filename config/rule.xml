@@ -38,7 +38,10 @@
             <Param name="roll" type="float64"/>
             <Param name="pitch" type="float64"/>
             <Param name="yaw" type="float64"/>
-            <Param name="weaponinfo" type="WeaponInfo[]"/>
+            <Param name="targetPos" type="Location"/>
+            <Param name="enableFire" type="bool"/>
+            <Param name="formationID" type="uint64"/>
+            <Param name="fireTarget" type="uint64"/>
         </Inputs>
         <Outputs>
             <Param name="ActionId" type="uint64"/>

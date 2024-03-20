@@ -8,20 +8,17 @@
     <Parameter name="ID" type="uint64" displayName="ID" usage="init,output" value="" unit=""/>
     <Parameter name="State" type="uint16" displayName="模型状态" usage="output" value="" unit=""/>
 
-    <Parameter name="FireID" type="uint64" displayName="开火者ID" usage="input" value="" unit=""/>
-    <Parameter name="FireData" type="FireEvent" displayName="开火事件" usage="input" value="" unit=""/>
-    <Parameter name="FireDataOut" type="FireEvent" displayName="本车开火事件" usage="output" value="" unit=""/>
+    <Parameter name="port" type="uint32" displayName="代理端口" usage="init" value="" unit=""/>
+    <Parameter name="filePath" type="string" displayName="规则集路径" usage="init" value="" unit=""/>
 
-    <Parameter name="EntityInfoOut" type="EntityInfo" displayName="本车信息" usage="output" value="" unit=""/>
-    <Parameter name="EntityInfo" type="EntityInfo" displayName="其他实体信息" usage="input" value="" unit=""/>
+    <Parameter name="restart" type="bool" displayName="重启命令" usage="output" value="0" unit=""/>
 
-    <Parameter name="VID" type="uint64" displayName="本车VID,从0开始编号" usage="output" value="" unit=""/>
+    <Parameter name="selfSide" type="uint16" displayName="所属阵营" usage="input" value="" unit=""/>
+    <Parameter name="carInfo" type="EntityInfo" displayName="其他实体信息" usage="input" value="" unit=""/>
 
-    <Parameter name="longitude" type="float64" displayName="经度" usage="init,output" value="0" unit=""/>
-    <Parameter name="latitude" type="float64" displayName="纬度" usage="init,output" value="0" unit=""/>
-    <Parameter name="altitude" type="float64" displayName="高度" usage="init,output" value="0" unit=""/>
-    <Parameter name="roll" type="float64" displayName="滚转" usage="output" value="0" unit=""/>
-    <Parameter name="pitch" type="float64" displayName="俯仰" usage="output" value="0" unit=""/>
-    <Parameter name="yaw" type="float64" displayName="偏航" usage="output" value="0" unit=""/>
+    <Parameter name="targetPos" type="Location" displayName="目标位置" usage="output" value="0" unit=""/>
+    <Parameter name="enableFire" type="bool" displayName="允许开火" usage="output" value="0" unit=""/>
+    <Parameter name="formationID" type="uint64" displayName="队形编号" usage="output" value="0" unit=""/>
+    <Parameter name="fireTarget" type="uint64" displayName="优先攻击目标" usage="output" value="0" unit=""/>
   </Parameters>
 </ModelInfo>

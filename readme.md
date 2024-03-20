@@ -1,7 +1,12 @@
-# 简单、高性能CQ
+# SimpleCQ
 
-## 组合模型(mymodel.dll)
+a simple, tiny, fast replacement for CQ-Sim
 
-## python代理模型(agent.dll)
+## assembled model (mymodel.dll)
 
-## 单机仿真平台(tinycq.exe)
+## agent model (agent.dll)
+
+TODO: use asio/grpc instead of OS-provided socket.
+
+## sim controller (tinycq.exe)
+

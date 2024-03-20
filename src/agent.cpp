@@ -35,7 +35,6 @@ using namespace std::literals;
 using CSValueMap = std::unordered_map<std::string, std::any>;
 
 constexpr auto host = "127.0.0.1";
-constexpr auto port = 50023;
 
 } // namespace
 
@@ -43,15 +42,12 @@ class AgentModel : public CSModelObject {
   public:
     AgentModel() = default;
     virtual bool Init(const CSValueMap &value) override {
-        static bool inited = false;
-        static std::mutex mtx;
-        std::unique_lock lock{mtx};
-        if (inited) {
-            return false;
-        }
-        inited = true;
+        auto port = std::any_cast<uint32_t>(value.find("port")->second);
         SetState(CSInstanceState::IS_INITIALIZED);
-        return l.link(host, port);
+        while(!l.link(host, port)) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+        return true;
     };
 
     virtual bool Tick(double time) override {
@@ -69,10 +65,10 @@ class AgentModel : public CSModelObject {
     virtual CSValueMap *GetOutput() override {
         SetState(CSInstanceState::IS_RUNNING);
         std::string s = l.getValue();
-        auto v = tools::myany::parseXMLString(s).transform_error([this](auto err){
+        auto v = tools::myany::parseXMLString(s).or_else([this](auto err)->std::expected<std::any, tools::myany::parseError> {
             this->WriteLog(std::format("parse error: {}", err), 4);
             return CSValueMap{};
-        }).value();
+        });
         outputBuffer = std::any_cast<CSValueMap>(std::move(v));
         outputBuffer.emplace("ForceSideID", GetForceSideID());
         outputBuffer.emplace("ModelID", GetModelID());

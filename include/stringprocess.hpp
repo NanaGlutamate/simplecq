@@ -17,11 +17,12 @@
 #include <ranges>
 #include <string>
 #include <vector>
+#include <span>
 
 namespace tools::mystr {
 
 template <std::ranges::range _Range>
-inline constexpr std::string join(_Range &&range, const std::string &middle) {
+inline constexpr std::string join(_Range &&range, std::string_view middle) {
     std::string result;
     bool first = true;
     for (auto &&item : range) {
@@ -33,9 +34,7 @@ inline constexpr std::string join(_Range &&range, const std::string &middle) {
         } else {
             result += middle;
         }
-        if constexpr (std::is_constructible_v<std::string, decltype(item)>) {
-            result += item;
-        }
+        result += item;
     }
     return result;
 }
@@ -134,6 +133,30 @@ inline std::string_view removeSpaceView(std::string_view s) {
     }
     auto end = s.find_last_not_of(" \t\r\n");
     return s.substr(start, end - start + 1);
+}
+
+template <std::ranges::range MDSContainer, std::ranges::range BContainer>
+    requires std::ranges::range<decltype(MDSContainer{}[0])> && requires (MDSContainer ic, BContainer bc) {
+        ic[0][0] = std::string("");
+        std::string(ic[0][0]);
+        ic.size();
+        ic[0].size();
+        bool(bc[0]);
+    }
+inline void align(MDSContainer& value, const BContainer& alignToRight) {
+    std::vector<size_t> length;
+    length.resize(value[0].size(), 0);
+    for(auto&& ic : value){
+        for(auto&& [l, s] : std::views::zip(length, ic)){
+            l = l > s.size() ? l : s.size();
+        }
+    }
+    for(auto&& ic : value){
+        for(auto&& [l, s, r] : std::views::zip(length, ic, alignToRight)){
+            size_t diff = l - s.size();
+            s = r ? repeat(" ", diff) + std::move(s) : std::move(s) + repeat(" ", diff);
+        }
+    }
 }
 
 // template <typename Mid> struct StringSplitter {

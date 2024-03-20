@@ -40,8 +40,9 @@ struct Link {
             return false;
         }
         flag = 1;
-        send(clientSocket, v.data(), v.size(), 0);
+        send(clientSocket, v.data(), int(v.size()), 0);
         send(clientSocket, &endFlag, 1, 0);
+        return true;
     }
     std::string getValue() {
         if (flag == 2) {
@@ -51,7 +52,7 @@ struct Link {
         int num;
         do{
             num = recv(clientSocket, contentBuffer.get(), 1024, 0);
-            ss << std::string_view{contentBuffer.get(), num};
+            ss << std::string_view{contentBuffer.get(), size_t(num)};
         }while(contentBuffer[num - 1] != '\n');
         std::string ret = ss.str();
         ss.clear();

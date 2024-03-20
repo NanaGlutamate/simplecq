@@ -5,6 +5,11 @@
 /config/profile.txt
 *.pb.h
 *.pb.cc
+*.exe
+*.dll
+*.exp
+*.pdb
+*.zip
 # !/src/**
 # !/include/**
 # !/config/**

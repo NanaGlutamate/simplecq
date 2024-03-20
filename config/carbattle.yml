@@ -1,26 +1,31 @@
 model_type:
     -
         model_type_name: car
-        dir_name: car
         dll_name: mymodel.dll
+        output_movable: false
+    -
+        model_type_name: agent
+        dll_name: mymodel.dll
+        output_movable: false
 models:
     -
         model_type: car
         side_id: 0
-        init_value: "<></>"
+        id: 0
+        init_value: "<c></c>"
 topic:
     - 
-        src_model_type: car
+        from: car
         members:
             - VID
             - FireDataOut
         subscribers:
             - 
-                dst_model_type: car
+                to: car
                 name_convert:
                     -
-                        from: VID
-                        to: FireID
+                        src_name: VID
+                        dst_name: FireID
                     - 
-                        from: FireDataOut
-                        to: FireData
+                        src_name: FireDataOut
+                        dst_name: FireData

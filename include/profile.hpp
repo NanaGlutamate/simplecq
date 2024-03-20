@@ -1,11 +1,14 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <initializer_list>
 #include <map>
 #include <string>
 #include <vector>
+
+#include "stringprocess.hpp"
 
 struct Profiler {
     struct Counter {
@@ -16,68 +19,55 @@ struct Profiler {
             p->log(id, t2);
             p = nullptr;
         }
-#else
-        Counter(Profiler *p, const std::string &id) {}
-        void end() {}
-#endif
-#ifdef __ENABLE_PROFILE
         ~Counter() {
             if (p) {
                 end();
             }
         }
-#endif
-#ifdef __ENABLE_PROFILE
         Profiler *p;
         std::string id;
         std::chrono::steady_clock::time_point t1;
+#else
+        void end() {}
 #endif
     };
     Counter startRecord(std::string id, Counter *end = nullptr) {
+#ifdef __ENABLE_PROFILE
         if (end) {
             end->end();
         }
         return Counter{this, std::move(id)};
-    }
-    void log(const std::string &id, std::chrono::nanoseconds time) {
-#ifdef __ENABLE_PROFILE
-        logs[id].times++;
-        logs[id].totalTime += time;
+#else
+        return Conter{};
 #endif
     }
 #ifdef __ENABLE_PROFILE
+    void log(const std::string &id, std::chrono::nanoseconds time) {
+        logs[id].times++;
+        logs[id].totalTime += time;
+    }
     struct Log {
         size_t times;
         std::chrono::nanoseconds totalTime;
     };
     std::map<std::string, Log, std::less<>> logs;
     std::string getResult() {
-        std::vector<std::tuple<size_t, std::string>> ans;
-        size_t max_size = 0;
-        for (auto &&[name, log] : logs) {
-            max_size = max(max_size, name.size());
-        }
+        using std::to_string;
+        std::vector<std::array<std::string, 9>> ans;
         ans.reserve(logs.size());
         for (auto &&[name, log] : logs) {
-            size_t t = log.totalTime.count() / 1000;
-            double rate = 1.;
-            std::string s = "us";
-            if (t > 1e6){
-                rate = 1000000;
-                s = " s";
-            }else if(t > 1e3){
-                rate = 1000;
-                s = "ms";
-            }
-            ans.emplace_back(t, std::format("[{:<{}}]: {:10.4} {} / {:10} times = {:10.3}\n", name, max_size + 1,
-                                            double(t) / rate, s, log.times, double(t) / double(log.times)));
+            auto t = std::chrono::duration_cast<std::chrono::microseconds>(log.totalTime);
+            ans.push_back({"[", std::move(name), " ]: ", to_string(t.count()), " us / ", to_string(log.times),
+                           " times = ", to_string(double(t.count()) / log.times), " us\n"});
         }
-        std::sort(ans.begin(), ans.end(), [](const auto &l, const auto &r) { return std::get<0>(l) > std::get<0>(r); });
-        std::string ret;
-        for (auto &&[_, line] : ans) {
-            ret += std::move(line);
-        }
-        return ret;
+        std::sort(ans.begin(), ans.end(),
+                  [](const auto &l, const auto &r) { return std::stoi(l[3]) > std::stoi(r[3]); });
+        constexpr std::array<bool, 9> alignConfig{true, false, true, true, true, true, true, true, true};
+        tools::mystr::align(ans, alignConfig);
+        return tools::mystr::join(
+            ans | std::views::transform([](auto &v) { return tools::mystr::join(std::move(v), ""); }), "");
     }
+#else
+    std::string getResult() { return "[profile disabled]"; }
 #endif
 };

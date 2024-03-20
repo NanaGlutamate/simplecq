@@ -91,6 +91,7 @@
         "future": "cpp",
         "numeric": "cpp",
         "random": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "mdspan": "cpp"
     }
 }

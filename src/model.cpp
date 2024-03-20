@@ -63,6 +63,8 @@ class MyAssembledModel : public CSModelObject {
         //         });
         //     }
         // };
+        auto p = profiler.startRecord("root: init");
+        
         if (!log_) {
             log_ = [](auto msg, auto) { std::cout << std::format("[AssembleModel]: ", msg) << std::endl; };
         }
@@ -71,18 +73,6 @@ class MyAssembledModel : public CSModelObject {
         // std::ifstream configFile(location + "assemble.yml");
         auto configFile = location + "assemble.yml";
         auto config = YAML::LoadFile(configFile);
-        if (config["config"]) {
-            auto n = config["config"];
-            if (n["profile"]) {
-                profileFile = n["profile"].as<std::string>();
-            }
-            if (n["restart_key"]) {
-                restartKey = n["restart_key"].as<std::string>();
-                if (&value != &initValue) {
-                    initValue = value;
-                }
-            }
-        }
         // fkyaml::node config = fkyaml::node::deserialize(configFile);
         for (auto &&model : config["models"]) {
             auto name = model["model_name"].as<std::string>();
@@ -97,41 +87,58 @@ class MyAssembledModel : public CSModelObject {
                 WriteLog(errorInfo, 4);
                 return false;
             }
-            subModels.emplace(name, std::move(*modelObj));
+            auto [it, _] = subModels.emplace(name, std::move(*modelObj));
             if (model["output_movable"]) {
-                subModels.find(name)->second.outputDataMovable = model["output_movable"].as<bool>();
+                it->second.outputDataMovable = model["output_movable"].as<bool>();
             }
         }
-        auto load = [&config](TransformInfo &tar, const std::string &name, auto check) {
-            for (auto &&rule : config[name.data()]) {
-                std::string srcName =
-                    rule["name"] ? rule["name"].as<std::string>() : rule["src_name"].as<std::string>();
-                std::string dstName =
-                    rule["name"] ? rule["name"].as<std::string>() : rule["dst_name"].as<std::string>();
-                std::string from = rule["from"] ? rule["from"].as<std::string>() : "root";
-                std::string to = rule["to"] ? rule["to"].as<std::string>() : "root";
-                check(from, to);
-                tar.rules[from][srcName].push_back(TransformInfo::Action{
-                    .to = to,
-                    .dstName = dstName,
-                });
+        if (&value != &initValue) {
+            // first init
+            if (config["config"]) {
+                auto n = config["config"];
+                if (n["profile"]) {
+                    profileFile = n["profile"].as<std::string>();
+                }
+                if (n["restart_key"]) {
+                    restartKey = n["restart_key"].as<std::string>();
+                    // if(&value != &initValue)
+                    initValue = value;
+                }
             }
-        };
-
-        TransformInfo init;
-        load(init, "init_convert", [](auto &from, auto &to) { assert(from == "root"); });
-        load(input, "input_convert", [](auto &from, auto &to) { assert(from == "root"); });
-        load(output, "output_convert", [](auto &from, auto &to) { assert(from != "root"); });
+            auto load = [&config](TransformInfo &tar, const std::string &name, auto check) {
+                for (auto &&rule : config[name.data()]) {
+                    std::string from = rule["from"] ? rule["from"].as<std::string>() : "root";
+                    std::string to = rule["to"] ? rule["to"].as<std::string>() : "root";
+                    check(from, to);
+                    for (auto &&value : rule["values"]) {
+                        std::string srcName =
+                            value["name"] ? value["name"].as<std::string>() : value["src_name"].as<std::string>();
+                        std::string dstName =
+                            value["name"] ? value["name"].as<std::string>() : value["dst_name"].as<std::string>();
+                        tar.rules[from][srcName].push_back(TransformInfo::Action{
+                            .to = to,
+                            .dstName = dstName,
+                        });
+                    }
+                }
+            };
+            load(init, "init_convert", [](auto &from, auto &to) { assert(from == "root"); });
+            load(input, "input_convert", [](auto &from, auto &to) { assert(from == "root"); });
+            load(output, "output_convert", [](auto &from, auto &to) { assert(from != "root"); });
+            SetState(CSInstanceState::IS_INITIALIZED);
+        }
 
         std::array<TransformInfo::InputBuffer, 1> buffers{
             TransformInfo::InputBuffer{"root", const_cast<CSValueMap *>(&value), false}};
-        auto data = init.transform(buffers);
+        auto data = init.transform(std::span{buffers});
+
+        p.end();
 
         for (auto &&[modelName, modelInfo] : subModels) {
+            auto p = profiler.startRecord(modelName + ": init");
             modelInfo.obj->Init(data[modelName]);
         }
 
-        SetState(CSInstanceState::IS_INITIALIZED);
         return true;
     };
 
@@ -157,7 +164,7 @@ class MyAssembledModel : public CSModelObject {
         auto p1 = profiler.startRecord("root: before_input");
         std::array<TransformInfo::InputBuffer, 1> buffers{
             TransformInfo::InputBuffer{"root", const_cast<CSValueMap *>(&value), false}};
-        auto data = input.transform(buffers);
+        auto data = input.transform(std::span{buffers});
 
         p1.end();
         for (auto &&[modelName, inputData] : data) {
@@ -200,7 +207,7 @@ class MyAssembledModel : public CSModelObject {
 
         auto p3 = profiler.startRecord("root: after_output");
 
-        auto data = output.transform(buffers);
+        auto data = output.transform(std::span{buffers});
 
         if (auto it = data.find("root"); it != data.end()) {
             outputBuffer = std::move(it->second);
@@ -217,7 +224,7 @@ class MyAssembledModel : public CSModelObject {
         p3.end();
 
         for (auto &&[modelName, inputData] : data) {
-            auto p2 = profiler.startRecord(modelName + ": innerinput");
+            auto p2 = profiler.startRecord(modelName + ": input");
             subModels.find(modelName)->second.obj->SetInput(inputData);
         }
 
@@ -235,10 +242,13 @@ class MyAssembledModel : public CSModelObject {
     void restart() {
         profileFile.clear();
         restartKey.clear();
+
         restartFlag = false;
+
         input.rules.clear();
         output.rules.clear();
         subModels.clear();
+
         Init(initValue);
     }
 
@@ -247,7 +257,7 @@ class MyAssembledModel : public CSModelObject {
     bool restartFlag = false;
     CSValueMap initValue;
     CSValueMap outputBuffer;
-    TransformInfo input, output;
+    TransformInfo init, input, output;
     std::unordered_map<std::string, ModelInfo> subModels;
 };
 

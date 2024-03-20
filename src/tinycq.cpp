@@ -50,7 +50,10 @@ int main() {
     return 0;
 }
 
-struct TinyCQ {};
+struct TinyCQ {
+    tf::Executor executor;
+    tf::Taskflow taskflow;
+};
 
 namespace {
 
