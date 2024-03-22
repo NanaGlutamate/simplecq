@@ -5,7 +5,7 @@ model_type:
         output_movable: false
     -
         model_type_name: agent
-        dll_name: mymodel.dll
+        dll_name: agent.dll
         output_movable: false
 models:
     -

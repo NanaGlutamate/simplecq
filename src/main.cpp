@@ -7,14 +7,15 @@
 #include "csmodel_base.h"
 #include "mysock.hpp"
 #include "thread_pool.hpp"
+#include "taskgraph.hpp"
 
 int main() {
     using namespace std;
     tf::Executor executor;
     tf::Taskflow taskflow;
     auto A = taskflow.emplace([] { return 1; });
-    auto A = taskflow.emplace([](int i) { return i + 1; });
-    auto C = taskflow.emplace([](int i) { std::cout << i; });
+    auto B = taskflow.emplace([]() { return 1; });
+    auto C = taskflow.emplace([]() { std::cout << 1; });
     A.precede(B); // A runs before B and C
     C.succeed(B); // D runs after  B and C
     executor.run(taskflow).wait();

@@ -2,11 +2,11 @@
 <!-- <?xml-model href="example1.0.xsd"?> -->
 <RuleSet version="1.0">
     <TypeDefines>
-        <TypeDefine type="Location">
+        <!-- <TypeDefine type="Location">
             <Variable name="altitude" type="float64" />
             <Variable name="longitude" type="float64" />
             <Variable name="latitude" type="float64" />
-        </TypeDefine>
+        </TypeDefine> -->
         <TypeDefine type="Vector3">
             <Variable name="x" type="float64" />
             <Variable name="y" type="float64" />
@@ -35,10 +35,13 @@
         <Inputs>
             <Param name="selfInfo" type="EntityInfo"/>
             <Param name="scannedInfo" type="EntityInfo[]"/>
+            <Param name="weaponInfo" type="WeaponInfo[]"/>
             <Param name="roll" type="float64"/>
             <Param name="pitch" type="float64"/>
             <Param name="yaw" type="float64"/>
-            <Param name="targetPos" type="Location"/>
+
+            <Param name="targetPos" type="Vector3"/>
+            <Param name="targetVel" type="float64"/>
             <Param name="enableFire" type="bool"/>
             <Param name="formationID" type="uint64"/>
             <Param name="fireTarget" type="uint64"/>
@@ -52,95 +55,21 @@
             <Param name="head_index" type="float64">
                 <Value>
                     <Expression>
+                        // car with minimum id in same side is head
                         {
-                            var head_id = -1
                             var i = 0
+                            var head_idx = -1
+                            var side = selfInfo.baseInfo.side
                             while(i &lt; scannedInfo.length()){
-                                if (selfInfo.baseInfo.side == scannedInfo[i].baseInfo.side and (scannedInfo[i].baseInfo.damageLevel == 0 or scannedInfo[i].baseInfo.damageLevel == 1)){
-                                    if (head_id == -1) {
-                                        head_id = i
-                                    } else if (scannedInfo[i].baseInfo.id &gt; scannedInfo[head_id].baseInfo.id) {
-                                        head_id = i
+                                var info = scannedInfo[i].baseInfo
+                                if (side == info.side and (info.damageLevel == 0 or info.damageLevel == 1)){
+                                    if (head_idx == -1 or info.id &lt; scannedInfo[head_idx].baseInfo.id) {
+                                        head_idx = i
                                     }
                                 }
                                 i = i + 1
                             }
-                            head_id
-                        }
-                    </Expression>
-                </Value>
-            </Param>
-            <Param name="enemy_head_index" type="float64">
-                <Value>
-                    <Expression>
-                        {
-                            var head_id = -1
-                            var i = 0
-                            while(i &lt; scannedInfo.length()){
-                                if (selfInfo.baseInfo.side != scannedInfo[i].baseInfo.side and (scannedInfo[i].baseInfo.damageLevel == 0 or scannedInfo[i].baseInfo.damageLevel == 1)){
-                                    if (head_id == -1) {
-                                        head_id = i
-                                    } else if (scannedInfo[i].baseInfo.id &gt; scannedInfo[head_id].baseInfo.id) {
-                                        head_id = i
-                                    }
-                                }
-                                i = i + 1
-                            }
-                            head_id
-                        }
-                    </Expression>
-                </Value>
-            </Param>
-            <Param name="distance" type="float64">
-                <Value>
-                    <Expression>
-                        if (head_index != -1 and enemy_head_index != -1) {
-                            var dis = pow((scannedInfo[head_index].position.x - scannedInfo[enemy_head_index].position.x), 2) + 
-                                pow((scannedInfo[head_index].position.z - scannedInfo[enemy_head_index].position.z), 2) + 
-                                pow((scannedInfo[head_index].position.y - scannedInfo[enemy_head_index].position.y), 2)
-                            pow(dis, 0.5)
-                        } else 50000
-                    </Expression>
-                </Value>
-            </Param>
-            <Param name="position_offset" type="Vector3">
-                <Value>
-                    <Expression>
-                        {
-                            var tar = Vector3{.x = 0, .y = 0, .z = 0}
-                            if (head_index != -1 and enemy_head_index != -1) {
-                                var diff = scannedInfo[head_index].baseInfo.id - selfInfo.baseInfo.id
-                                var target_v = scannedInfo[head_index].velocity
-                                var n = pow(target_v.x * target_v.x + target_v.y * target_v.y, 0.5)
-                                var sin_yaw = if (n == 0) 0 else target_v.y / n
-                                var cos_yaw = if (n == 0) 1 else target_v.x / n
-                                if (distance > 6000) {
-                                    tar.x = -20 * cos_yaw * diff
-                                    tar.y = -20 * sin_yaw * diff
-                                } else {
-                                    var side = if (diff % 2) 1 else -1
-                                    diff = floor(diff / 2 + 0.75)
-                                    tar.x = 20 * sin_yaw * diff * side
-                                    tar.y = -20 * cos_yaw * diff * side
-                                }
-                            }
-                            tar
-                        }
-                    </Expression>
-                </Value>
-            </Param>
-            <Param name="p_exp" type="Vector3">
-                <Value>
-                    <Expression>
-                        if (head_index == -1 or enemy_head_index == -1) {
-                            selfInfo.position
-                        } else {
-                            var tar = scannedInfo[head_index].position
-                            Vector3{
-                                .x = tar.x + position_offset.x,
-                                .y = tar.y + position_offset.y,
-                                .z = tar.z + position_offset.z
-                            }
+                            head_idx
                         }
                     </Expression>
                 </Value>
@@ -148,9 +77,51 @@
             <Param name="position_diff" type="Vector3">
                 <Value>
                     <Expression>
-                        Vector3{
-                            .x = p_exp.x - selfInfo.position.x,
-                            .y = p_exp.y - selfInfo.position.y,
+                        if (head_index == -1) {
+                            Vector3{.x = 0, .y = 0, .z = 0}
+                        } else if (is_head) {
+                            Vector3{
+                                .x = targetPos.x - selfInfo.position.x,
+                                .y = targetPos.y - selfInfo.position.y,
+                                .z = 0
+                            }
+                        } else {
+                            var position_offset = Vector3{.x = 0, .y = 0, .z = 0}
+                            var diff = scannedInfo[head_index].baseInfo.id - selfInfo.baseInfo.id
+                            var target_dir = targetPos - scannedInfo[head_index].position
+                            var n = pow(target_dir.x * target_dir.x + target_dir.y * target_dir.y, 0.5)
+                            var sin_yaw = if (n == 0) 0 else target_dir.y / n
+                            var cos_yaw = if (n == 0) 1 else target_dir.x / n
+                            position_offset.x = cos_yaw * formation_position_diff.x
+                            position_offset.y = sin_yaw * formation_position_diff.y
+                            var tar = scannedInfo[head_index].position
+                            Vector3{
+                                .x = tar.x + position_offset.x - selfInfo.position.x,
+                                .y = tar.y + position_offset.y - selfInfo.position.y,
+                                .z = 0
+                            }
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="v_target" type="Vector3">
+                <Value>
+                    <Expression>
+                        var velModifier = if (ready_to_fire) 0.8 else 1
+                        if (head_index == -1) Vector3{.x = 0, .y = 0, .z = 0} 
+                        else if (is_head) {
+                            var target_dir = targetPos - selfInfo.position
+                            var n = pow(target_dir.x * target_dir.x + target_dir.y * target_dir.y, 0.5)
+                            var sin_yaw = if (n == 0) 0 else target_dir.y / n
+                            var cos_yaw = if (n == 0) 1 else target_dir.x / n
+                            Vector3{
+                                .x = cos_yaw * targetVel * velModifier,
+                                .y = sin_yaw * targetVel * velModifier,
+                                .z = 0
+                            }
+                        } else Vector3{
+                            .x = scannedInfo[head_index].velocity.x * velModifier,
+                            .y = scannedInfo[head_index].velocity.y * velModifier,
                             .z = 0
                         }
                     </Expression>
@@ -171,33 +142,17 @@
                     </Expression>
                 </Value>
             </Param>
-            <Param name="v_target" type="Vector3">
-                <Value>
-                    <Expression>if (head_index == -1) Vector3{.x = 0, .y = 0, .z = 0} else scannedInfo[head_index].velocity</Expression>
-                </Value>
-            </Param>
-            <Param name="realyaw" type="float64">
-                <Value>
-                    <Expression>
-                        yaw * 3.1415926 / 180
-                    </Expression>
-                </Value>
-            </Param>
-            <Param name="yawdiff" type="float64">
+            <Param name="same_direction" type="float64">
                 <Value>
                     <Expression>
                         {
+                            var realyaw = yaw * 3.1415926 / 180
                             var tmp = atan2(v_target.y, v_target.x) - realyaw
                             if (tmp &gt; 3.1415926) tmp = tmp - 2 * 3.1415926
                             if (tmp &lt; -3.1415926) tmp = tmp + 2 * 3.1415926
-                            tmp
+                            fabs(tmp) &lt; 1.7
                         }
                     </Expression>
-                </Value>
-            </Param>
-            <Param name="same_direction" type="float64">
-                <Value>
-                    <Expression>fabs(yawdiff) &lt; 1.7</Expression>
                 </Value>
             </Param>
             <Param name="in_front" type="float64">
@@ -220,41 +175,28 @@
                     </Expression>
                 </Value>
             </Param>
-            <Param name="attacked" type="float64"/>
-            <Param name="start_fire" type="float64"/>
+            <Param name="ready_to_fire" type="float64">
+                <Value>
+                    <Expression>
+                        if (weaponInfo.length() == 0) false
+                        else weaponInfo[0].reloadingState &lt; 2 and fireState
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="fireState" type="bool"/>
+            <Param name="formation_position_diff" type="Vector3"/>
+            <Param name="id_in_formation" type="float64"/>
+            <Param name="formationIDPre" type="float64"/>
         </Caches>
     </MetaInfo>
     <SubRuleSets>
+        <!-- control car -->
         <SubRuleSet>
             <Rules>
+                <!-- do nothing if head not found -->
                 <Rule>
                     <Condition>
-                        <Expression>true</Expression>
-                    </Condition>
-                    <Consequence>
-                        <Assignment>
-                            <Target>ActionId</Target>
-                            <Value>
-                                <Expression>7</Expression>
-                            </Value>
-                        </Assignment>
-                        <Assignment>
-                            <Target>Param1</Target>
-                            <Value>
-                                <Expression>15</Expression>
-                            </Value>
-                        </Assignment>
-                        <Assignment>
-                            <Target>Param2</Target>
-                            <Value>
-                                <Expression>1.2</Expression>
-                            </Value>
-                        </Assignment>
-                    </Consequence>
-                </Rule>
-                <Rule>
-                    <Condition>
-                        <Expression>head_index == -1 or enemy_head_index == -1</Expression>
+                        <Expression>head_index == -1</Expression>
                     </Condition>
                     <Consequence>
                         <Assignment>
@@ -265,134 +207,97 @@
                         </Assignment>
                     </Consequence>
                 </Rule>
+                <!-- compute self id in formation and never change -->
                 <Rule>
                     <Condition>
-                        <Expression>distance + ((selfInfo.baseInfo.id * 7) % 17) * 3 &lt; 2000 and not start_fire</Expression>
+                        <Expression>id_in_formation == 0</Expression>
                     </Condition>
                     <Consequence>
                         <Assignment>
-                            <Target>start_fire</Target>
-                            <Value>
-                                <Expression>true</Expression>
-                            </Value>
-                        </Assignment>
-                        <Assignment>
-                            <Target>ActionId</Target>
-                            <Value>
-                                <Expression>11</Expression>
-                            </Value>
-                        </Assignment>
-                    </Consequence>
-                </Rule>
-                <Rule>
-                    <Condition>
-                        <Expression>is_head and attacked</Expression>
-                    </Condition>
-                    <Consequence>
-                        <Assignment>
-                            <Target>ActionId</Target>
-                            <Value>
-                                <Expression>5</Expression>
-                            </Value>
-                        </Assignment>
-                    </Consequence>
-                </Rule>
-                <Rule>
-                    <Condition>
-                        <Expression>is_head and distance &gt; 5000</Expression>
-                    </Condition>
-                    <Consequence>
-                        <Assignment>
-                            <Target>ActionId</Target>
-                            <Value>
-                                <Expression>7</Expression>
-                            </Value>
-                        </Assignment>
-                        <Assignment>
-                            <Target>Param1</Target>
-                            <Value>
-                                <Expression>15</Expression>
-                            </Value>
-                        </Assignment>
-                        <Assignment>
-                            <Target>Param2</Target>
+                            <Target>id_in_formation</Target>
                             <Value>
                                 <Expression>
-                                    atan2(
-                                        scannedInfo[enemy_head_index].position.y - selfInfo.position.y,
-                                        scannedInfo[enemy_head_index].position.x - selfInfo.position.x
-                                    )
+                                    {
+                                        var i = 0
+                                        var tmp = 1
+                                        var side = selfInfo.baseInfo.side
+                                        var id = selfInfo.baseInfo.id
+                                        while(i &lt; scannedInfo.length()){
+                                            var info = scannedInfo[i].baseInfo
+                                            if (side == info.side and info.id &lt; id){
+                                                tmp = tmp + 1
+                                            }
+                                            i = i + 1
+                                        }
+                                        tmp
+                                    }
                                 </Expression>
                             </Value>
                         </Assignment>
                     </Consequence>
                 </Rule>
+                <!-- change fire state -->
                 <Rule>
                     <Condition>
-                        <Expression>is_head and distance &gt; 4500</Expression>
+                        <Expression>enableFire != fireState</Expression>
                     </Condition>
                     <Consequence>
                         <Assignment>
                             <Target>ActionId</Target>
                             <Value>
-                                <Expression>7</Expression>
+                                <Expression>
+                                    if (enableFire) {
+                                        if (fireTarget != -1) 10
+                                        else 11
+                                    } else 12
+                                </Expression>
                             </Value>
                         </Assignment>
                         <Assignment>
                             <Target>Param1</Target>
                             <Value>
-                                <Expression>5</Expression>
+                                <Expression>0</Expression>
                             </Value>
                         </Assignment>
                         <Assignment>
                             <Target>Param2</Target>
                             <Value>
+                                <Expression>fireTarget</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>fireState</Target>
+                            <Value>
+                                <Expression>enableFire</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>id_in_formation</Target>
+                            <Value>
                                 <Expression>
-                                    atan2(
-                                        scannedInfo[enemy_head_index].position.y - selfInfo.position.y,
-                                        scannedInfo[enemy_head_index].position.x - selfInfo.position.x
-                                    )
+                                    {
+                                        var i = 0
+                                        var tmp = 1
+                                        var side = selfInfo.baseInfo.side
+                                        var id = selfInfo.baseInfo.id
+                                        while(i &lt; scannedInfo.length()){
+                                            var info = scannedInfo[i].baseInfo
+                                            if (side == info.side and info.id &lt; id){
+                                                tmp = tmp + 1
+                                            }
+                                            i = i + 1
+                                        }
+                                        tmp
+                                    }
                                 </Expression>
                             </Value>
                         </Assignment>
                     </Consequence>
                 </Rule>
+                <!-- car move -->
                 <Rule>
                     <Condition>
-                        <Expression>is_head</Expression>
-                    </Condition>
-                    <Consequence>
-                        <Assignment>
-                            <Target>ActionId</Target>
-                            <Value>
-                                <Expression>7</Expression>
-                            </Value>
-                        </Assignment>
-                        <Assignment>
-                            <Target>Param1</Target>
-                            <Value>
-                                <Expression>15</Expression>
-                            </Value>
-                        </Assignment>
-                        <Assignment>
-                            <Target>Param2</Target>
-                            <Value>
-                                <Expression>
-                                    atan2(
-                                        scannedInfo[enemy_head_index].position.y - selfInfo.position.y,
-                                        scannedInfo[enemy_head_index].position.x - selfInfo.position.x
-                                    )
-                                </Expression>
-                            </Value>
-                        </Assignment>
-                    </Consequence>
-                </Rule>
-                <Rule>
-                    <Condition>
-                        <Expression>
-                            // same_direction and in_front
-                            true
-                        </Expression>
+                        <Expression>same_direction and in_front</Expression>
                     </Condition>
                     <Consequence>
                         <Assignment>
@@ -415,6 +320,7 @@
                         </Assignment>
                     </Consequence>
                 </Rule>
+                <!-- car move -->
                 <Rule>
                     <Condition>
                         <Expression>not same_direction and in_front</Expression>
@@ -440,6 +346,7 @@
                         </Assignment>
                     </Consequence>
                 </Rule>
+                <!-- car move -->
                 <Rule>
                     <Condition>
                         <Expression>same_direction and not in_front</Expression>
@@ -465,6 +372,7 @@
                         </Assignment>
                     </Consequence>
                 </Rule>
+                <!-- car move -->
                 <Rule>
                     <Condition>
                         <Expression>true</Expression>
@@ -486,6 +394,55 @@
                             <Target>Param2</Target>
                             <Value>
                                 <Expression>atan2(v_exp.y, v_exp.x)</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+            </Rules>
+        </SubRuleSet>
+        <!-- update formation -->
+        <SubRuleSet>
+            <Rules>
+                <!-- not init -->
+                <Rule>
+                    <Condition>
+                        <Expression>id_in_formation == 0</Expression>
+                    </Condition>
+                    <Consequence/>
+                </Rule>
+                <!-- formation changed -->
+                <Rule>
+                    <Condition>
+                        <Expression>formationIDPre != formationID</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>formationIDPre</Target>
+                            <Value>
+                                <Expression>formationID</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>formation_position_diff</Target>
+                            <Value>
+                                <Expression>
+                                    {
+                                        var diff = Vector3{.x = 0, .y = 0, .z = 0}
+                                        if (formationID == 1) {
+                                            // |
+                                            diff.x = (1 - id_in_formation) * 20
+                                        } else if (formationID == 2) {
+                                            // ---
+                                            var flag = id_in_formation % 2
+                                            var len = (id_in_formation - flag) / 2
+                                            diff.y = 2 * (flag - 0.5) * len * 20
+                                        } else if (formationID == 3) {
+                                            //TODO: not finished
+                                        } 
+                                        // else error
+                                        diff
+                                    }
+                                </Expression>
                             </Value>
                         </Assignment>
                     </Consequence>

@@ -2,11 +2,11 @@
 <!-- <?xml-model href="example1.0.xsd"?> -->
 <RuleSet version="1.0">
     <TypeDefines>
-        <TypeDefine type="Location">
+        <!-- <TypeDefine type="Location">
             <Variable name="altitude" type="float64" />
             <Variable name="longitude" type="float64" />
             <Variable name="latitude" type="float64" />
-        </TypeDefine>
+        </TypeDefine> -->
         <TypeDefine type="Vector3">
             <Variable name="x" type="float64" />
             <Variable name="y" type="float64" />
@@ -37,7 +37,8 @@
             <Param name="selfSide" type="uint16"/>
         </Inputs>
         <Outputs>
-            <Param name="targetPos" type="Location"/>
+            <Param name="targetPos" type="Vector3"/>
+            <Param name="targetVel" type="float64"/>
             <Param name="enableFire" type="bool"/>
             <Param name="formationID" type="uint64"/>
             <Param name="fireTarget" type="uint64"/>

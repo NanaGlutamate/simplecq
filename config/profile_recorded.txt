@@ -1,0 +1,10 @@
+[beh: tick           ]: 11618492 us / 100000 times = 116.184920 us
+[phy: tick           ]:   493711 us / 100000 times =   4.937110 us
+[root: after_output  ]:   461278 us / 100000 times =   4.612780 us
+[beh: innerinput     ]:   207426 us /  99999 times =   2.074281 us
+[phy: innerinput     ]:   101572 us / 100000 times =   1.015720 us
+[beh: output         ]:    62200 us / 100000 times =   0.622000 us
+[phy: output         ]:    50350 us / 100000 times =   0.503500 us
+[root: before_output ]:    11489 us / 100000 times =   0.114890 us
+[root: before_input  ]:    10792 us / 100000 times =   0.107920 us
+

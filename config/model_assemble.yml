@@ -3,11 +3,11 @@ config:
     restart_key: restart
 models:
     - 
-        dll_name: "D:/Desktop/FinalProj/Code/simplecq/bin/RelWithDebInfo/CarPhyModel.dll"
+        dll_name: "D:/Desktop/FinalProj/Code/simplecq/config/CarPhyModel.dll"
         model_name: phy
         output_movable: true
     - 
-        dll_name: "D:/Desktop/FinalProj/Code/simplecq/bin/RelWithDebInfo/cq_interpreter.dll"
+        dll_name: "D:/Desktop/FinalProj/Code/simplecq/config/cq_interpreter.dll"
         model_name: beh
         output_movable: false
 init_convert:
@@ -33,6 +33,7 @@ input_convert:
         to: beh
         values:
             - {name: targetPos}
+            - {name: targetVel}
             - {name: enableFire}
             - {name: formationID}
             - {name: fireTarget}
@@ -57,21 +58,13 @@ output_convert:
             - {name: roll}
             - {name: yaw}
             - {name: pitch}
-            -
-                src_name: EntityInfoOut
-                dst_name: selfInfo
-            - 
-                src_name: scannedInfoOut
-                dst_name: scannedInfo
-            # - 
-            #     src_name: weaponInfoOut
-            #     dst_name: weaponInfo
+            - {src_name: EntityInfoOut, dst_name: selfInfo}
+            - {src_name: scannedInfoOut, dst_name: scannedInfo}
+            - {src_name: weaponInfoOut, dst_name: weaponInfo}
     - 
         from: beh
         to: phy
         values:
             - {name: Param1}
             - {name: Param2}
-            -
-                src_name: ActionId
-                dst_name: Command
+            - {src_name: ActionId, dst_name: Command}
