@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ModelInfo id="" name="AgentModelRed" displayName="AgentModelRed" dllName="AgentModel" hasGeoInfo="false" category="COMPOSED_ENTITY" multiples="">
+<ModelInfo id="" name="AgentModel" displayName="AgentModel" dllName="AgentModel" hasGeoInfo="true" category="COMPOSED_ENTITY" multiples="">
   <Parameters>
     <Parameter name="InstanceName" type="string" displayName="名称" usage="init,output" value="" unit=""/>
     <Parameter name="ForceSideID" type="uint16" displayName="所属阵营" usage="init,output" value="" unit=""/>
@@ -13,9 +13,9 @@
 
     <Parameter name="restart" type="bool" displayName="重启命令" usage="output" value="0" unit=""/>
 
-    <Parameter name="selfSide" type="uint16" displayName="所属阵营" usage="input" value="" unit=""/>
     <Parameter name="carInfo" type="EntityInfo" displayName="其他实体信息" usage="input" value="" unit=""/>
 
+    <Parameter name="side" type="float64" displayName="阵营" usage="output" value="0" unit=""/>
     <Parameter name="targetPos" type="Vector3" displayName="目标位置" usage="output" value="0" unit=""/>
     <Parameter name="targetVel" type="float64" displayName="目标速度" usage="output" value="0" unit=""/>
     <Parameter name="enableFire" type="bool" displayName="允许开火" usage="output" value="0" unit=""/>
