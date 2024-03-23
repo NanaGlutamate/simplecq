@@ -47,7 +47,7 @@ class AgentModel : public CSModelObject {
         while(!l.link(host, port)) {
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
-        auto s = tools::myany::printAnyToString<tools::myany::PythonFormat>(std::move(inputBuffer));
+        auto s = tools::myany::printAnyToString<tools::myany::PythonFormat>(value);
         l.sendValue(s);
         return true;
     };

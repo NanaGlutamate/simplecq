@@ -43,7 +43,7 @@
             <Param name="side" type="float64[]"/>
             <Param name="targetPos" type="Vector3[]"/>
             <Param name="targetVel" type="float64[]"/>
-            <Param name="enableFire" type="bool[]"/>
+            <Param name="enableFire" type="uint32[]"/>
             <Param name="formationID" type="uint64[]"/>
             <Param name="fireTarget" type="uint64[]"/>
         </Inputs>
@@ -58,7 +58,8 @@
                     <Expression>
                         if (side.length() == 0) -1
                         else if (side[0] == selfInfo.baseInfo.side) 0
-                        else 1
+                        else if (side[1] == selfInfo.baseInfo.side) 1
+                        else -1
                     </Expression>
                 </Value>
             </Param>
@@ -193,7 +194,7 @@
                     </Expression>
                 </Value>
             </Param>
-            <Param name="fireState" type="bool"/>
+            <Param name="fireState" type="uint32"/>
             <Param name="formation_position_diff" type="Vector3"/>
             <Param name="id_in_formation" type="float64"/>
             <Param name="formationIDPre" type="float64"/>

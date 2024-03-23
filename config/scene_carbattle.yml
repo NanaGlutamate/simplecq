@@ -29,3 +29,55 @@ topic:
                     - 
                         src_name: FireDataOut
                         dst_name: FireData
+    - 
+        from: car
+        members:
+            - EntityInfoOut
+        subscribers:
+            - 
+                to: car
+                name_convert:
+                    -
+                        src_name: EntityInfoOut
+                        dst_name: EntityInfo
+    - 
+        from: car
+        members:
+            - EntityInfoOut
+        subscribers:
+            - 
+                to: agent
+                name_convert:
+                    -
+                        src_name: EntityInfoOut
+                        dst_name: carInfo
+    - 
+        from: agent
+        members:
+            - restart
+        subscribers:
+            - 
+                to: car
+                name_convert:
+                    -
+                        src_name: restart
+                        dst_name: restart
+    - 
+        from: agent
+        members:
+            - ForceSideID
+            - targetPos
+            - targetVel
+            - enableFire
+            - formationID
+            - fireTarget
+        subscribers:
+            - 
+                to: car
+                name_convert:
+                    - {name: ForceSideID}
+                    - {name: targetPos}
+                    - {name: targetVel}
+                    - {name: enableFire}
+                    - {name: formationID}
+                    - {name: fireTarget}

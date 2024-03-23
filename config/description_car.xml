@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ModelInfo id="" name="AssembledCar" displayName="AssembledCar" dllName="mymodel" hasGeoInfo="true" category="COMPOSED_ENTITY" multiples="">
+<ModelInfo id="" name="AssembledCar" displayName="AssembledCar" dllName="AssembledCar" hasGeoInfo="true" category="COMPOSED_ENTITY" multiples="">
   <Parameters>
     <Parameter name="InstanceName" type="string" displayName="名称" usage="init,output" value="" unit=""/>
     <Parameter name="ForceSideID" type="uint16" displayName="所属阵营" usage="init,output" value="" unit=""/>
@@ -9,7 +9,7 @@
     <Parameter name="State" type="uint16" displayName="模型状态" usage="output" value="" unit=""/>
 
     <Parameter name="filePath" type="string" displayName="规则集路径" usage="init" value="" unit=""/>
-    <Parameter name="restart" type="bool" displayName="重启命令" usage="input" value="0" unit=""/>
+    <Parameter name="restart" type="uint32" displayName="重启命令" usage="input" value="" unit=""/>
 
     <Parameter name="FireID" type="uint64" displayName="开火者ID" usage="input" value="" unit=""/>
     <Parameter name="FireData" type="FireEvent" displayName="开火事件" usage="input" value="" unit=""/>
@@ -20,18 +20,18 @@
 
     <Parameter name="VID" type="uint64" displayName="本车VID,从0开始编号" usage="output" value="" unit=""/>
 
-    <Parameter name="longitude" type="float64" displayName="经度" usage="init,output" value="0" unit=""/>
-    <Parameter name="latitude" type="float64" displayName="纬度" usage="init,output" value="0" unit=""/>
-    <Parameter name="altitude" type="float64" displayName="高度" usage="init,output" value="0" unit=""/>
-    <Parameter name="roll" type="float64" displayName="滚转" usage="output" value="0" unit=""/>
-    <Parameter name="pitch" type="float64" displayName="俯仰" usage="output" value="0" unit=""/>
-    <Parameter name="yaw" type="float64" displayName="偏航" usage="output" value="0" unit=""/>
+    <Parameter name="longitude" type="float64" displayName="经度" usage="init,output" value="" unit=""/>
+    <Parameter name="latitude" type="float64" displayName="纬度" usage="init,output" value="" unit=""/>
+    <Parameter name="altitude" type="float64" displayName="高度" usage="init,output" value="" unit=""/>
+    <Parameter name="roll" type="float64" displayName="滚转" usage="output" value="" unit=""/>
+    <Parameter name="pitch" type="float64" displayName="俯仰" usage="output" value="" unit=""/>
+    <Parameter name="yaw" type="float64" displayName="偏航" usage="output" value="" unit=""/>
     
-    <Parameter name="side" type="float64" displayName="命令阵营" usage="input" value="0" unit=""/>
-    <Parameter name="targetPos" type="Location" displayName="目标位置" usage="input" value="0" unit=""/>
-    <Parameter name="targetVel" type="float64" displayName="目标速度" usage="input" value="0" unit=""/>
-    <Parameter name="enableFire" type="bool" displayName="允许开火" usage="input" value="0" unit=""/>
-    <Parameter name="formationID" type="uint64" displayName="队形编号" usage="input" value="0" unit=""/>
-    <Parameter name="fireTarget" type="uint64" displayName="优先攻击目标" usage="input" value="0" unit=""/>
+    <Parameter name="side" type="uint16" displayName="命令阵营" usage="input" value="" unit=""/>
+    <Parameter name="targetPos" type="Vector3" displayName="目标位置" usage="input" value="" unit=""/>
+    <Parameter name="targetVel" type="float64" displayName="目标速度" usage="input" value="" unit=""/>
+    <Parameter name="enableFire" type="uint32" displayName="允许开火" usage="input" value="" unit=""/>
+    <Parameter name="formationID" type="uint64" displayName="队形编号" usage="input" value="" unit=""/>
+    <Parameter name="fireTarget" type="uint64" displayName="优先攻击目标" usage="input" value="" unit=""/>
   </Parameters>
 </ModelInfo>

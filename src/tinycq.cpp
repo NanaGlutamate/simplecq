@@ -10,6 +10,30 @@
 #include "dllop.hpp"
 #include "thread_pool.hpp"
 
+struct TinyCQ {
+    tf::Executor executor;
+    tf::Taskflow taskflow;
+    TinyCQ() = default;
+};
+
+namespace {
+std::unique_ptr<TinyCQ> cqInstance;
+} // namespace
+
+extern "C" {
+__declspec(dllexport) bool CreateCQInstance() {
+    if (cqInstance){
+        return false;
+    }
+    cqInstance = std::make_unique<TinyCQ>();
+    return true;
+}
+__declspec(dllexport) bool SendMessage(int id, const char *msg, size_t msgLen, const char *topicName,
+                                       size_t topicNameLen) {
+    return true;
+}
+}
+
 int main() {
     using namespace cq;
 
@@ -48,29 +72,4 @@ int main() {
     // }
     // std::cout << std::format("[main]: {1}", std::this_thread::get_id(), "end") << std::endl;
     return 0;
-}
-
-struct TinyCQ {
-    tf::Executor executor;
-    tf::Taskflow taskflow;
-};
-
-namespace {
-
-std::unique_ptr<TinyCQ> cqInstance;
-
-} // namespace
-
-extern "C" {
-__declspec(dllexport) bool CreateCQInstance() {
-    if (cqInstance){
-        return false;
-    }
-    cqInstance = std::make_unique<TinyCQ>();
-    return true;
-}
-__declspec(dllexport) bool SendMessage(int id, const char *msg, size_t msgLen, const char *topicName,
-                                       size_t topicNameLen) {
-    return true;
-};
 }

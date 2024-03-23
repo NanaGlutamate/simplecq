@@ -39,7 +39,7 @@
         <Outputs>
             <Param name="targetPos" type="Vector3"/>
             <Param name="targetVel" type="float64"/>
-            <Param name="enableFire" type="bool"/>
+            <Param name="enableFire" type="uint32"/>
             <Param name="formationID" type="uint64"/>
             <Param name="fireTarget" type="uint64"/>
         </Outputs>
@@ -49,6 +49,43 @@
     <SubRuleSets>
         <SubRuleSet>
             <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>true</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>targetPos</Target>
+                            <Value>
+                                <Expression>Vector3{.x = 10000, .y = 0, .z = 0}</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>targetVel</Target>
+                            <Value>
+                                <Expression>20</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>enableFire</Target>
+                            <Value>
+                                <Expression>true</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>formationID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>fireTarget</Target>
+                            <Value>
+                                <Expression>0</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
             </Rules>
         </SubRuleSet>
     </SubRuleSets>

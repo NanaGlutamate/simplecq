@@ -19,7 +19,6 @@ struct Link {
         if (WSAStartup(sockVersion, &data) != 0) {
             return false;
         }
-
         clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (clientSocket == INVALID_SOCKET) {
             return false;
@@ -58,9 +57,12 @@ struct Link {
         ss.clear();
         return ret;
     }
+    ~Link(){
+        closesocket(clientSocket);
+    }
     // must send -> get -> send -> get
     int flag = 0;
     std::stringstream ss;
     std::unique_ptr<char[]> contentBuffer = std::make_unique<char[]>(1024 + 5);
-    SOCKET clientSocket;
+    SOCKET clientSocket = 0;
 };
