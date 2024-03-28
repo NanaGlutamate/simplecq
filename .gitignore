@@ -3,6 +3,8 @@
 /out/
 /.vs/
 /config/profile.txt
+/config/src/
+__pycache__/
 *.pb.h
 *.pb.cc
 *.exe

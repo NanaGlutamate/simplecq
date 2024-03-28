@@ -49,12 +49,11 @@ struct Link {
         }
         flag = 2;
         int num;
+        std::string ret;
         do{
             num = recv(clientSocket, contentBuffer.get(), 1024, 0);
-            ss << std::string_view{contentBuffer.get(), size_t(num)};
+            ret += std::string_view{contentBuffer.get(), size_t(num)};
         }while(contentBuffer[num - 1] != '\n');
-        std::string ret = ss.str();
-        ss.clear();
         return ret;
     }
     ~Link(){
@@ -62,7 +61,6 @@ struct Link {
     }
     // must send -> get -> send -> get
     int flag = 0;
-    std::stringstream ss;
     std::unique_ptr<char[]> contentBuffer = std::make_unique<char[]>(1024 + 5);
     SOCKET clientSocket = 0;
 };

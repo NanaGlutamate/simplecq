@@ -1,0 +1,552 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- <?xml-model href="example1.0.xsd"?> -->
+<RuleSet version="1.0">
+    <TypeDefines>
+        <!-- <TypeDefine type="Location">
+            <Variable name="altitude" type="float64" />
+            <Variable name="longitude" type="float64" />
+            <Variable name="latitude" type="float64" />
+        </TypeDefine> -->
+        <TypeDefine type="Vector3">
+            <Variable name="x" type="float64" />
+            <Variable name="y" type="float64" />
+            <Variable name="z" type="float64" />
+        </TypeDefine>
+        <TypeDefine type="BaseInfo">
+            <Variable name="id" type="uint64"/>
+            <Variable name="side" type="uint16"/>
+            <Variable name="type" type="uint16"/>
+            <Variable name="damageLevel" type="uint16"/>
+        </TypeDefine>
+        <TypeDefine type="EntityInfo">
+            <Variable name="baseInfo" type="BaseInfo"/>
+            <Variable name="velocity" type="Vector3"/>
+            <Variable name="position" type="Vector3"/>
+        </TypeDefine>
+        <TypeDefine type="WeaponInfo">
+            <Variable name="ammo" type="int32"/>
+            <Variable name="reloadingState" type="float64"/>
+            <Variable name="range" type="float64"/>
+            <Variable name="direction" type="float64"/>
+            <Variable name="weaponName" type="string"/>
+        </TypeDefine>
+    </TypeDefines>
+    <MetaInfo>
+        <Inputs>
+            <Param name="ForceSideID" type="uint16"/>
+            <Param name="selfInfo" type="EntityInfo"/>
+            <Param name="scannedInfo" type="EntityInfo[]"/>
+            <Param name="weaponInfo" type="WeaponInfo[]"/>
+            <Param name="roll" type="float64"/>
+            <Param name="pitch" type="float64"/>
+            <Param name="yaw" type="float64"/>
+
+            <Param name="targetDir" type="Vector3"/>
+            <Param name="targetVel" type="float64"/>
+            <Param name="enableFire" type="uint32"/>
+            <Param name="formationID" type="uint64"/>
+        </Inputs>
+        <Outputs>
+            <Param name="ActionId" type="uint64"/>
+            <Param name="Param1" type="float64"/>
+            <Param name="Param2" type="float64"/>
+        </Outputs>
+        <Caches>
+            <Param name="isDefenseSide" type="bool"><Value><Expression>ForceSideID == 2</Expression></Value></Param>
+
+            <Param name="targetDir_" type="Vector3">
+                <Value>
+                    <Expression>
+                        if (isDefenseSide) Vector3{.x = 0, .y = -1, .z = 0} else targetDir
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="targetVel_" type="float64">
+                <Value>
+                    <Expression>
+                        if (isDefenseSide) 0 else targetVel
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="enableFire_" type="uint32">
+                <Value>
+                    <Expression>
+                        if (isDefenseSide) distance &lt; 1500
+                        else enableFire
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="formationID_" type="uint64">
+                <Value>
+                    <Expression>
+                        if (isDefenseSide) {
+                            if (distance &gt; 3000) 3
+                            else if (distance &gt; 1400) 4
+                            else 2
+                        } else formationID
+                    </Expression>
+                </Value>
+            </Param>
+
+            <Param name="distance" type="float64">
+                <Value>
+                    <Expression>
+                        if (isDefenseSide) {
+                            if (enemy_index == -1 or head_index == -1){
+                                1000000
+                            }else{
+                                var p_self = scannedInfo[enemy_index].position
+                                var p_enemy = scannedInfo[head_index].position
+                                sqrt(pow(p_self.y - p_enemy.y, 2) + pow(p_self.x - p_enemy.x, 2))
+                            }
+                        } else {
+                            1000000
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="enemy_index" type="float64">
+                <Value>
+                    <Expression>
+                        if (isDefenseSide) {
+                            var i = 0
+                            var enemy_idx = -1
+                            var side = selfInfo.baseInfo.side
+                            while(i &lt; scannedInfo.length()){
+                                var info = scannedInfo[i].baseInfo
+                                if (side != info.side and (info.damageLevel == 0 or info.damageLevel == 1)){
+                                    if (enemy_idx == -1 or info.id &lt; scannedInfo[enemy_idx].baseInfo.id) {
+                                        enemy_idx = i
+                                    }
+                                }
+                                i = i + 1
+                            }
+                            enemy_idx
+                        } else -1
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="head_index" type="float64">
+                <Value>
+                    <Expression>
+                        // car with minimum id in same side is head
+                        {
+                            var i = 0
+                            var head_idx = -1
+                            var side = selfInfo.baseInfo.side
+                            while(i &lt; scannedInfo.length()){
+                                var info = scannedInfo[i].baseInfo
+                                if (side == info.side and (info.damageLevel == 0 or info.damageLevel == 1)){
+                                    if (head_idx == -1 or info.id &lt; scannedInfo[head_idx].baseInfo.id) {
+                                        head_idx = i
+                                    }
+                                }
+                                i = i + 1
+                            }
+                            head_idx
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="is_head" type="float64">
+                <Value>
+                    <Expression>
+                        if (head_index == -1) false
+                        else scannedInfo[head_index].baseInfo.id == selfInfo.baseInfo.id
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="ready_to_fire" type="float64">
+                <Value>
+                    <Expression>
+                        if (weaponInfo.length() == 0) false
+                        else fireState and weaponInfo[0].reloadingState &lt; 0.5
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="head_exp_dir" type="Vector3">
+                <Value>
+                    <Expression>
+                        if (head_index == -1) Vector3{.x = 0, .y = 0, .z = 0}
+                        else {
+                            var dir_x = targetDir_.x
+                            var dir_y = targetDir_.y
+                            var n = pow(dir_x * dir_x + dir_y * dir_y, 0.5)
+                            Vector3{
+                                .x = if (n == 0) 1 else dir_x / n,
+                                .y = if (n == 0) 0 else dir_y / n,
+                                .z = 0
+                            }
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="position_diff" type="Vector3">
+                <Value>
+                    <Expression>
+                        if (head_index == -1) {
+                            Vector3{.x = 0, .y = 0, .z = 0}
+                        } else if (is_head) {
+                            Vector3{.x = 0, .y = 0, .z = 0}
+                        } else {
+                            var cos_yaw = head_exp_dir.x
+                            var sin_yaw = head_exp_dir.y
+                            var position_offset_x = cos_yaw * formation_position_diff.x - sin_yaw * formation_position_diff.y
+                            var position_offset_y = cos_yaw * formation_position_diff.y + sin_yaw * formation_position_diff.x
+                            var tar = scannedInfo[head_index].position
+                            Vector3{
+                                .x = tar.x + position_offset_x - selfInfo.position.x,
+                                .y = tar.y + position_offset_y - selfInfo.position.y,
+                                .z = 0
+                            }
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="v_target" type="Vector3">
+                <Value>
+                    <Expression>
+                        var velModifier = if (ready_to_fire) 0.8 else 1
+                        if (head_index == -1) Vector3{.x = 0, .y = 0, .z = 0} 
+                        else {
+                            // is_head or not
+                            var cos_yaw = head_exp_dir.x
+                            var sin_yaw = head_exp_dir.y
+                            Vector3{
+                                .x = cos_yaw * targetVel_ * velModifier,
+                                .y = sin_yaw * targetVel_ * velModifier,
+                                .z = 0
+                            }
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="v_exp" type="Vector3">
+                <Value>
+                    <Expression>
+                        if (is_head) v_target
+                        else {
+                            var K1 = 0.8
+                            var K2 = 3
+                            Vector3{
+                                .x = v_target.x + K1 * position_diff.x + K2 * (v_target.x - selfInfo.velocity.x),
+                                .y = v_target.y + K1 * position_diff.y + K2 * (v_target.y - selfInfo.velocity.y),
+                                .z = 0
+                            }
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="same_direction" type="float64">
+                <Value>
+                    <Expression>
+                        {
+                            var realyaw = yaw * 3.1415926 / 180
+                            var tmp = v_target.y * sin(realyaw) + v_target.x * cos(realyaw)
+                            tmp &gt; -0.5
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="in_front" type="float64">
+                <Value>
+                    <Expression>
+                        {
+                            var realyaw = yaw * 3.1415926 / 180
+                            var tmp = position_diff.y * sin(realyaw) + position_diff.x * cos(realyaw)
+                            tmp &gt; -1
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="fireState" type="uint32"/>
+            <Param name="formation_position_diff" type="Vector3"/>
+            <Param name="id_in_formation" type="float64"/>
+            <Param name="formationIDPre" type="float64"/>
+        </Caches>
+    </MetaInfo>
+    <SubRuleSets>
+        <!-- control car -->
+        <SubRuleSet>
+            <Rules>
+                <!-- <Rule>
+                    <Condition>
+                        <Expression>1</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>20</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param2</Target>
+                            <Value>
+                                <Expression>0.2</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule> -->
+                <!-- do nothing if not init -->
+                <Rule>
+                    <Condition>
+                        <Expression>head_index == -1</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <!-- compute self id in formation and never change -->
+                <Rule>
+                    <Condition>
+                        <Expression>id_in_formation == 0</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>id_in_formation</Target>
+                            <Value>
+                                <Expression>
+                                    {
+                                        var i = 0
+                                        var tmp = 1
+                                        var side = selfInfo.baseInfo.side
+                                        var id = selfInfo.baseInfo.id
+                                        while(i &lt; scannedInfo.length()){
+                                            var info = scannedInfo[i].baseInfo
+                                            if (side == info.side and info.id &lt; id){
+                                                tmp = tmp + 1
+                                            }
+                                            i = i + 1
+                                        }
+                                        tmp
+                                    }
+                                </Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <!-- formation changed -->
+                <Rule>
+                    <Condition>
+                        <Expression>formationIDPre != formationID_</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>formationIDPre</Target>
+                            <Value>
+                                <Expression>formationID_</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>formation_position_diff</Target>
+                            <Value>
+                                <Expression>
+                                    {
+                                        var diff = Vector3{.x = 0, .y = 0, .z = 0}
+                                        if (formationIDPre == 1) {
+                                            // |
+                                            diff.x = (1 - id_in_formation) * 50
+                                        } else if (formationIDPre == 2) {
+                                            // ---
+                                            var flag = id_in_formation % 2
+                                            var len = (id_in_formation - flag) / 2
+                                            diff.y = 2 * (flag - 0.5) * len * 50
+                                        } else if (formationIDPre == 3) {
+                                            //  . . 
+                                            // 
+                                            // . . .
+                                            var line = floor(id_in_formation / 2) % 2
+                                            var flag = id_in_formation % 2
+                                            var len = (id_in_formation - flag) / 2
+                                            diff.y = 2 * (flag - 0.5) * len * 100
+                                            diff.x = line * 400
+                                        } else if (formationIDPre == 4) {
+                                            //  . . 
+                                            // . . .
+                                            var line = floor(id_in_formation / 2) % 2
+                                            var flag = id_in_formation % 2
+                                            var len = (id_in_formation - flag) / 2
+                                            diff.y = 2 * (flag - 0.5) * len * 100
+                                            diff.x = line * 200
+                                        } else if (formationIDPre == 5) {
+                                            // | |
+                                            var flag = (id_in_formation - 1) % 2
+                                            var len = (id_in_formation - flag - 1) / 2
+                                            if (flag) diff.y = 100
+                                            diff.x = -len * 50
+                                        }
+                                        diff
+                                    }
+                                </Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <!-- change fire state -->
+                <Rule>
+                    <Condition>
+                        <Expression>enableFire_ != fireState</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>
+                                    if (enableFire_) 11
+                                    else 12
+                                </Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>0</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>fireState</Target> 
+                            <Value>
+                                <Expression>enableFire_</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <!-- car stop -->
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            {
+                                var dis = sqrt(position_diff.x * position_diff.x + position_diff.y * position_diff.y)
+                                dis &lt;= 15 and targetVel_ == 0
+                            }
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <!-- car move -->
+                <Rule>
+                    <Condition>
+                        <Expression>same_direction and in_front</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>pow(pow(v_exp.x, 2) + pow(v_exp.y, 2), 0.5)</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param2</Target>
+                            <Value>
+                                <Expression>atan2(v_exp.y, v_exp.x)</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <!-- car move -->
+                <Rule>
+                    <Condition>
+                        <Expression>not same_direction and in_front</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>-5</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param2</Target>
+                            <Value>
+                                <Expression>atan2(v_exp.y, v_exp.x)</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <!-- car move -->
+                <Rule>
+                    <Condition>
+                        <Expression>same_direction and not in_front</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>pow(pow(v_exp.x, 2) + pow(v_exp.y, 2), 0.5) / 2</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param2</Target>
+                            <Value>
+                                <Expression>atan2(v_exp.y, v_exp.x)</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <!-- car move -->
+                <Rule>
+                    <Condition>
+                        <Expression>true</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>-5</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param2</Target>
+                            <Value>
+                                <Expression>atan2(v_exp.y, v_exp.x)</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+            </Rules>
+        </SubRuleSet>
+    </SubRuleSets>
+</RuleSet>

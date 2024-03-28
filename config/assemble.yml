@@ -1,13 +1,15 @@
 config:
     profile: "D:/Desktop/FinalProj/Code/simplecq/config/profile.txt"
     restart_key: restart
+    side_filter: side
+    log_level: 1
 models:
     - 
         dll_name: "D:/Desktop/FinalProj/Code/simplecq/config/CarPhyModel.dll"
         model_name: phy
         output_movable: true
     - 
-        dll_name: "D:/Desktop/FinalProj/Code/simplecq/config/cq_interpreter.dll"
+        dll_name: "D:/Desktop/FinalProj/Code/simplecq/config/ruleset.dll"
         model_name: beh
         output_movable: false
 init_convert:
@@ -22,6 +24,7 @@ init_convert:
         values:
             - {name: filePath}
             - {name: enableLog}
+            - {name: ForceSideID}
 input_convert: 
     - 
         to: phy
@@ -32,7 +35,7 @@ input_convert:
     - 
         to: beh
         values:
-            - {name: targetPos}
+            - {name: targetDir}
             - {name: targetVel}
             - {name: enableFire}
             - {name: formationID}
@@ -55,9 +58,9 @@ output_convert:
         from: phy
         to: beh
         values:
-            - {name: roll}
+            # - {name: roll}
+            # - {name: pitch}
             - {name: yaw}
-            - {name: pitch}
             - {src_name: EntityInfoOut, dst_name: selfInfo}
             - {src_name: scannedInfoOut, dst_name: scannedInfo}
             - {src_name: weaponInfoOut, dst_name: weaponInfo}

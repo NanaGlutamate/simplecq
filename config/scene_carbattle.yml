@@ -1,19 +1,75 @@
-model_type:
+model_types:
     -
         model_type_name: car
-        dll_name: mymodel.dll
-        output_movable: false
+        dll_path: "D:/Desktop/FinalProj/Code/simplecq/config/mymodel.dll"
+        output_movable: true
     -
         model_type_name: agent
-        dll_name: agent.dll
+        dll_path: "D:/Desktop/FinalProj/Code/simplecq/config/agent.dll"
+        # dll_path: "D:/Desktop/FinalProj/Code/simplecq/config/cq_interpreter.dll"
         output_movable: false
 models:
     -
         model_type: car
-        side_id: 0
-        id: 0
-        init_value: "<c></c>"
-topic:
+        side_id: 1
+        id: 1
+        init_value: "<c><enableLog><bool>1</bool></enableLog><longitude><double>32.8800</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    -
+        model_type: car
+        side_id: 1
+        id: 2
+        init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.8801</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    # -
+    #     model_type: car
+    #     side_id: 1
+    #     id: 3
+    #     init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.8802</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    # -
+    #     model_type: car
+    #     side_id: 1
+    #     id: 4
+    #     init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.8803</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    -
+        model_type: agent
+        side_id: 1
+        id: 5
+        init_value: "<c><ForceSideID><uint16_t>1</uint16_t></ForceSideID><enableLog><bool>1</bool></enableLog><port><uint32_t>40023</uint32_t></port><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_attackside.xml</string></filePath></c>"
+    -
+        model_type: car
+        side_id: 2
+        id: 6
+        init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.9300</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    -
+        model_type: car
+        side_id: 2
+        id: 7
+        init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.9301</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    # -
+    #     model_type: car
+    #     side_id: 2
+    #     id: 8
+    #     init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.9302</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    # -
+    #     model_type: car
+    #     side_id: 2
+    #     id: 9
+    #     init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.9303</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+topics:
+    -
+        from: car
+        members:
+            - VID
+            - longitude
+            - latitude
+        subscribers:
+            - 
+                to: root
+                name_convert:
+                    - {name: longitude}
+                    - {name: latitude}
+                    -
+                        src_name: VID
+                        dst_name: ID
     - 
         from: car
         members:
@@ -40,11 +96,6 @@ topic:
                     -
                         src_name: EntityInfoOut
                         dst_name: EntityInfo
-    - 
-        from: car
-        members:
-            - EntityInfoOut
-        subscribers:
             - 
                 to: agent
                 name_convert:
@@ -59,14 +110,11 @@ topic:
             - 
                 to: car
                 name_convert:
-                    -
-                        src_name: restart
-                        dst_name: restart
+                    - {name: restart}
     - 
         from: agent
         members:
-            - ForceSideID
-            - targetPos
+            - targetDir
             - targetVel
             - enableFire
             - formationID
@@ -75,8 +123,10 @@ topic:
             - 
                 to: car
                 name_convert:
-                    - {name: ForceSideID}
-                    - {name: targetPos}
+                    # -
+                    #     src_name: ForceSideID
+                    #     dst_name: side
+                    - {name: targetDir}
                     - {name: targetVel}
                     - {name: enableFire}
                     - {name: formationID}

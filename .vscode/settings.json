@@ -92,6 +92,8 @@
         "numeric": "cpp",
         "random": "cpp",
         "variant": "cpp",
-        "mdspan": "cpp"
+        "mdspan": "cpp",
+        "filesystem": "cpp",
+        "regex": "cpp"
     }
 }

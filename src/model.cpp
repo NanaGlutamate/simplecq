@@ -64,7 +64,7 @@ class MyAssembledModel : public CSModelObject {
         //     }
         // };
         auto p = profiler.startRecord("root: init");
-        
+
         if (!log_) {
             log_ = [](auto msg, auto) { std::cout << std::format("[AssembleModel]: ", msg) << std::endl; };
         }
@@ -104,6 +104,12 @@ class MyAssembledModel : public CSModelObject {
                     // if(&value != &initValue)
                     initValue = value;
                 }
+                if (n["side_filter"]) {
+                    sideFilter = n["side_filter"].as<std::string>();
+                }
+                if (n["log_level"]) {
+                    logLevel = n["log_level"].as<uint32_t>();
+                }
             }
             auto load = [&config](TransformInfo &tar, const std::string &name, auto check) {
                 for (auto &&rule : config[name.data()]) {
@@ -136,6 +142,14 @@ class MyAssembledModel : public CSModelObject {
 
         for (auto &&[modelName, modelInfo] : subModels) {
             auto p = profiler.startRecord(modelName + ": init");
+            modelInfo.obj->SetLogFun([this, modelName](auto msg, auto level) {
+                if (level >= logLevel) {
+                    WriteLog(std::format("SubModel[{}]Log: {}", modelName, msg), level);
+                }
+            });
+            modelInfo.obj->SetID(GetID());
+            modelInfo.obj->SetForceSideID(GetForceSideID());
+
             modelInfo.obj->Init(data[modelName]);
         }
 
@@ -159,6 +173,12 @@ class MyAssembledModel : public CSModelObject {
         if (restartFlag || (restartKey.size() && value.contains(restartKey))) {
             restartFlag = true;
             return true;
+        }
+        if (!sideFilter.empty()) {
+            if (auto it = value.find(sideFilter);
+                it != value.end() && GetForceSideID() != std::any_cast<uint16_t>(it->second)) {
+                return true;
+            }
         }
 
         auto p1 = profiler.startRecord("root: before_input");
@@ -185,11 +205,7 @@ class MyAssembledModel : public CSModelObject {
         if (!realInited) {
             for (auto &[name, modelInfo] : subModels) {
                 modelInfo.obj->SetID(GetID());
-                modelInfo.obj->SetLogFun([this, name](auto msg, auto level) {
-                    if (level >= 4) {
-                        this->WriteLog(std::format("SubModel[{}]Log: {}", name, msg), level);
-                    }
-                });
+                modelInfo.obj->SetForceSideID(GetForceSideID());
             }
             SetState(CSInstanceState::IS_RUNNING);
             realInited = true;
@@ -240,20 +256,16 @@ class MyAssembledModel : public CSModelObject {
   private:
     bool realInited = false;
     void restart() {
-        profileFile.clear();
-        restartKey.clear();
-
         restartFlag = false;
 
-        input.rules.clear();
-        output.rules.clear();
         subModels.clear();
 
         Init(initValue);
     }
 
     Profiler profiler;
-    std::string profileFile, restartKey;
+    uint32_t logLevel;
+    std::string profileFile, restartKey, sideFilter;
     bool restartFlag = false;
     CSValueMap initValue;
     CSValueMap outputBuffer;

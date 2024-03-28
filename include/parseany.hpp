@@ -58,15 +58,23 @@ std::expected<std::any, parseError> parseXML(rapidxml::xml_node<char> *node) {
         string_view type{tmp->name(), tmp->name_size()};
         for (auto p = node->first_node(); p; p = p->next_sibling()) {
             if (p->name() != type) {
-                return parseError::different_type_in_same_list;
+                return std::unexpected(parseError::different_type_in_same_list);
             }
-            ret.push_back(parseXML(p));
+            auto tmp = parseXML(p);
+            if(!tmp){
+                return std::unexpected(tmp.error());
+            }
+            ret.push_back(std::move(tmp.value()));
         }
         return std::move(ret);
     } else if (node->name() == "c"sv) {
         unordered_map<string, any> ret;
         for (auto p = node->first_node(); p; p = p->next_sibling()) {
-            ret.emplace(string{p->name(), p->name_size()}, parseXML(p->first_node()));
+            auto tmp = parseXML(p->first_node());
+            if(!tmp){
+                return std::unexpected(tmp.error());
+            }
+            ret.emplace(string{p->name(), p->name_size()}, std::move(tmp.value()));
         }
         return std::move(ret);
     } else {
@@ -96,7 +104,7 @@ std::expected<std::any, parseError> parseXML(rapidxml::xml_node<char> *node) {
             return double(stof(value));
         if (type == "string"sv)
             return string{value};
-        return parseError::unknown_type;
+        return std::unexpected(parseError::unknown_type);
     }
 }
 

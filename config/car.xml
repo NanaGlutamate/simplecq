@@ -6,7 +6,7 @@
         <LENGTH>5</LENGTH>
         <MAX_ANGLE>0.523</MAX_ANGLE>
         <ROTATE_SPEED>0.349</ROTATE_SPEED>
-        <MAX_LINEAR_SPEED>30</MAX_LINEAR_SPEED>
+        <MAX_LINEAR_SPEED>18</MAX_LINEAR_SPEED>
         <MAX_FRONT_ACCELERATION>3</MAX_FRONT_ACCELERATION>
         <MAX_BRAKE_ACCELERATION>2.5</MAX_BRAKE_ACCELERATION>
         <MAX_LATERAL_ACCELERATION>1</MAX_LATERAL_ACCELERATION>
@@ -32,14 +32,14 @@
                 <pitchDown>0.174532925</pitchDown>
             </rotateZone>
             <rotateSpeed>
-                <yaw>0.34906585</yaw>
-                <pitch>0.174532925</pitch>
+                <yaw>0.8</yaw>
+                <pitch>0.1</pitch>
             </rotateSpeed>
             <weapon>
                 <ammoType>125mmHE</ammoType>
                 <ammoRemain>40</ammoRemain>
                 <reloadingTime>6</reloadingTime>
-                <range>5000</range>
+                <range>1800</range>
                 <speed>1300</speed>
             </weapon>
         </FireUnit>

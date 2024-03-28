@@ -1,0 +1,45 @@
+{
+    "targetDir": {
+        "x": 0.000000,
+        "y": -1.000000,
+        "z": 0.000000
+    },
+    "targetVel": 0.000000,
+    "in_front": 0.000000,
+    "distance": 4767.743925,
+    "formationIDPre": 3.000000,
+    "enableFire": 0,
+    "formationID": 3,
+    "enemy_index": 0.000000,
+    "is_head": 0.000000,
+    "head_index": 1.000000,
+    "ready_to_fire": 0.000000,
+    "head_exp_dir": {
+        "x": 0.000000,
+        "y": -1.000000,
+        "z": 0.000000
+    },
+    "position_diff": {
+        "x": -21.052636,
+        "y": -14.261555,
+        "z": 0.000000
+    },
+    "v_target": {
+        "x": 0.000000,
+        "y": 0.000000,
+        "z": 0.000000
+    },
+    "v_exp": {
+        "x": -16.842109,
+        "y": -11.409244,
+        "z": 0.000000
+    },
+    "same_direction": 1.000000,
+    "fireState": 0,
+    "formation_position_diff": {
+        "x": 0.000000,
+        "y": 200.000000,
+        "z": 0.000000
+    },
+    "id_in_formation": 5.000000
+}

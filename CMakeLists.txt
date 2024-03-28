@@ -12,7 +12,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
 add_definitions(-D__PROJECT_ROOT_PATH="${PROJECT_SOURCE_DIR}")
-add_definitions(-D__ENABLE_PROFILE)
+# add_definitions(-D__ENABLE_PROFILE)
 
 if(MSVC)
   string(APPEND CMAKE_CXX_FLAGS " /permissive- /Zc:__cplusplus /utf-8 ")

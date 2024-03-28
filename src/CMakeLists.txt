@@ -16,7 +16,8 @@ add_dependencies(test mymodel)
 add_dependencies(mymodel yaml)
 add_dependencies(tinycq yaml)
 
-target_link_libraries(mymodel yaml ws2_32)
+# target_link_libraries(mymodel yaml ws2_32)
+target_link_libraries(mymodel yaml)
 target_link_libraries(tinycq yaml)
 
 # find_package(gRPC CONFIG REQUIRED)

@@ -8,10 +8,10 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <span>
 #include <string>
 #include <unordered_map>
-#include <mutex>
 
 #include <assert.h>
 
@@ -23,10 +23,10 @@
 
 // #include "agentrpc/cq_agent.pb.h"
 
-#include "mysock.hpp"
 #include "csmodel_base.h"
-#include "printcsvaluemap.hpp"
+#include "mysock.hpp"
 #include "parseany.hpp"
+#include "printcsvaluemap.hpp"
 
 namespace {
 
@@ -44,11 +44,11 @@ class AgentModel : public CSModelObject {
     virtual bool Init(const CSValueMap &value) override {
         auto port = std::any_cast<uint32_t>(value.find("port")->second);
         SetState(CSInstanceState::IS_INITIALIZED);
-        while(!l.link(host, port)) {
+        while (!l.link(host, port)) {
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
         auto s = tools::myany::printAnyToString<tools::myany::PythonFormat>(value);
-        l.sendValue(s);
+        l.sendValue("[" + s + "]");
         return true;
     };
 
@@ -67,11 +67,17 @@ class AgentModel : public CSModelObject {
     virtual CSValueMap *GetOutput() override {
         SetState(CSInstanceState::IS_RUNNING);
         std::string s = l.getValue();
-        auto v = tools::myany::parseXMLString(s).or_else([this](auto err)->std::expected<std::any, tools::myany::parseError> {
-            this->WriteLog(std::format("parse error: {}", err), 4);
-            return CSValueMap{};
-        });
-        outputBuffer = std::any_cast<CSValueMap>(std::move(v));
+        try {
+            auto v = tools::myany::parseXMLString(s).or_else(
+                [this](auto err) -> std::expected<std::any, tools::myany::parseError> {
+                    this->WriteLog(std::format("parse error: {}", err), 4);
+                    return CSValueMap{};
+                });
+            outputBuffer = std::any_cast<CSValueMap>(std::move(v.value()));
+        } catch (rapidxml::parse_error &err) {
+            WriteLog(err.what(), 5);
+            WriteLog(s, 5);
+        }
         outputBuffer.emplace("ForceSideID", GetForceSideID());
         outputBuffer.emplace("ModelID", GetModelID());
         outputBuffer.emplace("InstanceName", GetInstanceName());
@@ -79,6 +85,7 @@ class AgentModel : public CSModelObject {
         outputBuffer.emplace("State", uint16_t(GetState()));
         return &outputBuffer;
     };
+
   private:
     Link l;
     std::vector<std::any> inputBuffer;

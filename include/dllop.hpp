@@ -73,6 +73,11 @@ struct ModelInfo {
     bool outputDataMovable = false;
     ModelInfo() = default;
     ModelInfo(const ModelInfo &) = delete;
+    void createAs(ModelInfo& o){
+        o.dll = dll;
+        o.obj = dll.createFunc();
+        o.outputDataMovable = outputDataMovable;
+    }
     ModelInfo(ModelInfo &&o) : dll(o.dll) {
         obj = o.obj;
         outputDataMovable = o.outputDataMovable;
@@ -92,4 +97,11 @@ std::expected<ModelInfo, std::string_view> loadModel(const std::string &dllName)
         info.obj = dll.createFunc();
         return info;
     });
+}
+
+ModelInfo loadModel(ModelDllInterface dll) {
+    ModelInfo info;
+    info.dll = dll;
+    info.obj = dll.createFunc();
+    return info;
 }

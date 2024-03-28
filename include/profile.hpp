@@ -38,7 +38,7 @@ struct Profiler {
         }
         return Counter{this, std::move(id)};
 #else
-        return Conter{};
+        return Counter{};
 #endif
     }
 #ifdef __ENABLE_PROFILE

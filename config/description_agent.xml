@@ -9,13 +9,14 @@
     <Parameter name="State" type="uint16" displayName="模型状态" usage="output" value="" unit=""/>
 
     <Parameter name="port" type="uint32" displayName="代理端口" usage="init" value="" unit=""/>
+    <Parameter name="enableLog" type="bool" displayName="允许写入log" usage="init" value="" unit=""/>
     <Parameter name="filePath" type="string" displayName="规则集路径" usage="init" value="" unit=""/>
 
     <Parameter name="restart" type="uint32" displayName="重启命令" usage="output" value="" unit=""/>
 
     <Parameter name="carInfo" type="EntityInfo" displayName="其他实体信息" usage="input" value="" unit=""/>
 
-    <Parameter name="targetPos" type="Vector3" displayName="目标位置" usage="output" value="" unit=""/>
+    <Parameter name="targetDir" type="Vector3" displayName="目标方向" usage="output" value="" unit=""/>
     <Parameter name="targetVel" type="float64" displayName="目标速度" usage="output" value="" unit=""/>
     <Parameter name="enableFire" type="uint32" displayName="允许开火" usage="output" value="" unit=""/>
     <Parameter name="formationID" type="uint64" displayName="队形编号" usage="output" value="" unit=""/>
