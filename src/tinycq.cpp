@@ -87,7 +87,8 @@ struct TinyCQ {
     std::ofstream logFile;
     tf::Executor executor;
     tf::Taskflow frame, input, tick;
-    std::vector<std::unordered_map<std::string, CSValueMap>> dissambledTopics;
+    
+    // std::vector<std::unordered_map<std::string, CSValueMap>> dissambledTopics;
     // model_type_name -> models
     std::unordered_map<std::string, std::vector<ModelInfo>> models;
     // model_type_name -> topics
@@ -100,7 +101,7 @@ struct TinyCQ {
         frame.clear();
         input.clear();
         tick.clear();
-        dissambledTopics.clear();
+        // dissambledTopics.clear();
         models.clear();
         topics.clear();
     }
