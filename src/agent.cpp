@@ -67,16 +67,18 @@ class AgentModel : public CSModelObject {
     virtual CSValueMap *GetOutput() override {
         SetState(CSInstanceState::IS_RUNNING);
         std::string s = l.getValue();
-        try {
-            auto v = tools::myany::parseXMLString(s).or_else(
-                [this](auto err) -> std::expected<std::any, tools::myany::parseError> {
-                    this->WriteLog(std::format("parse error: {}", err), 4);
-                    return CSValueMap{};
-                });
-            outputBuffer = std::any_cast<CSValueMap>(std::move(v.value()));
-        } catch (rapidxml::parse_error &err) {
-            WriteLog(err.what(), 5);
-            WriteLog(s, 5);
+        if (s != "\n") {
+            try {
+                auto v = tools::myany::parseXMLString(s).or_else(
+                    [this](auto err) -> std::expected<std::any, tools::myany::parseError> {
+                        this->WriteLog(std::format("parse error: {}", err), 4);
+                        return CSValueMap{};
+                    });
+                outputBuffer = std::any_cast<CSValueMap>(std::move(v.value()));
+            } catch (rapidxml::parse_error &err) {
+                WriteLog(err.what(), 5);
+                WriteLog(s, 5);
+            }
         }
         outputBuffer.emplace("ForceSideID", GetForceSideID());
         outputBuffer.emplace("ModelID", GetModelID());

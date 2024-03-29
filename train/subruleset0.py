@@ -22,8 +22,17 @@ class SubRuleSet0:
                 if ((info["damageLevel"] == 0) or (info["damageLevel"] == 1)):
                     if ((side == info["side"]) and ((head_idx == (- 1)) or (info["id"] < self.input_vars["carInfo"][head_idx]["baseInfo"]["id"]))):
                         head_idx = i
-                    elif ((side != info["side"]) and ((enemy_idx == (- 1)) or (info["id"] < self.input_vars["carInfo"][enemy_idx]["baseInfo"]["id"]))):
-                        enemy_idx = i
+                        pass
+                    else:
+                        if ((side != info["side"]) and ((enemy_idx == (- 1)) or (info["id"] < self.input_vars["carInfo"][enemy_idx]["baseInfo"]["id"]))):
+                            enemy_idx = i
+                            pass
+                        else:
+                            pass
+                        pass
+                    pass
+                else:
+                    pass
                 i = (i + 1)
                 
             i_0 = dict()

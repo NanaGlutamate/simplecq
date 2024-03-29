@@ -104,9 +104,10 @@
             </Param>
             <Param name="side_distance" type="float64"/>
             <!-- 
-                stage 0: |
-                stage 1: -
-                stage 2: fire
+                stage 0: 1
+                stage 1: 5
+                stage 2: 2
+                stage 3: fire
             -->
             <Param name="combatStage" type="uint64"/>
         </Caches>
@@ -151,6 +152,24 @@
                                 <Expression>1</Expression>
                             </Value>
                         </Assignment>
+                        <Assignment>
+                            <Target>targetVel</Target>
+                            <Value>
+                                <Expression>16</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>enableFire</Target>
+                            <Value>
+                                <Expression>false</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>formationID</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
                     </Consequence>
                 </Rule>
                 <Rule>
@@ -167,7 +186,7 @@
                         <Assignment>
                             <Target>targetVel</Target>
                             <Value>
-                                <Expression>15</Expression>
+                                <Expression>13</Expression>
                             </Value>
                         </Assignment>
                         <Assignment>
@@ -195,6 +214,18 @@
                                 <Expression>2</Expression>
                             </Value>
                         </Assignment>
+                        <Assignment>
+                            <Target>formationID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>targetVel</Target>
+                            <Value>
+                                <Expression>6</Expression>
+                            </Value>
+                        </Assignment>
                     </Consequence>
                 </Rule>
                 <Rule>
@@ -208,35 +239,38 @@
                                 <Expression>enemy_direction</Expression>
                             </Value>
                         </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <!-- stage == 2 -->
+                        <Expression>combatStage == 2 and distance &lt; 1000</Expression>
+                    </Condition>
+                    <Consequence>
                         <Assignment>
-                            <Target>targetVel</Target>
+                            <Target>combatStage</Target>
                             <Value>
-                                <Expression>15</Expression>
+                                <Expression>3</Expression>
                             </Value>
                         </Assignment>
                         <Assignment>
                             <Target>enableFire</Target>
                             <Value>
-                                <Expression>false</Expression>
-                            </Value>
-                        </Assignment>
-                        <Assignment>
-                            <Target>formationID</Target>
-                            <Value>
-                                <Expression>1</Expression>
+                                <Expression>true</Expression>
                             </Value>
                         </Assignment>
                     </Consequence>
                 </Rule>
                 <Rule>
                     <Condition>
-                        <Expression>distance &lt; 1500</Expression>
+                        <!-- stage == 2 -->
+                        <Expression>true</Expression>
                     </Condition>
                     <Consequence>
                         <Assignment>
-                            <Target>enableFire</Target>
+                            <Target>targetDir</Target>
                             <Value>
-                                <Expression>true</Expression>
+                                <Expression>enemy_direction</Expression>
                             </Value>
                         </Assignment>
                     </Consequence>

@@ -5,8 +5,8 @@ model_types:
         output_movable: true
     -
         model_type_name: agent
-        dll_path: "D:/Desktop/FinalProj/Code/simplecq/config/agent.dll"
-        # dll_path: "D:/Desktop/FinalProj/Code/simplecq/config/cq_interpreter.dll"
+        # dll_path: "D:/Desktop/FinalProj/Code/simplecq/config/agent.dll"
+        dll_path: "D:/Desktop/FinalProj/Code/simplecq/config/cq_interpreter.dll"
         output_movable: false
 models:
     -
@@ -19,57 +19,105 @@ models:
         side_id: 1
         id: 2
         init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.8801</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
-    # -
-    #     model_type: car
-    #     side_id: 1
-    #     id: 3
-    #     init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.8802</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
-    # -
-    #     model_type: car
-    #     side_id: 1
-    #     id: 4
-    #     init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.8803</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    -
+        model_type: car
+        side_id: 1
+        id: 3
+        init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.8802</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    -
+        model_type: car
+        side_id: 1
+        id: 4
+        init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.8803</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    -
+        model_type: car
+        side_id: 1
+        id: 5
+        init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.8804</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    -
+        model_type: car
+        side_id: 1
+        id: 6
+        init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.8805</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    -
+        model_type: car
+        side_id: 1
+        id: 7
+        init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.8806</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    -
+        model_type: car
+        side_id: 1
+        id: 8
+        init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.8807</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    
+    
     -
         model_type: agent
         side_id: 1
-        id: 5
+        id: 15
         init_value: "<c><ForceSideID><uint16_t>1</uint16_t></ForceSideID><enableLog><bool>1</bool></enableLog><port><uint32_t>40023</uint32_t></port><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_attackside.xml</string></filePath></c>"
     -
         model_type: car
         side_id: 2
-        id: 6
+        id: 16
         init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.9300</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
     -
         model_type: car
         side_id: 2
-        id: 7
+        id: 17
         init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.9301</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
-    # -
-    #     model_type: car
-    #     side_id: 2
-    #     id: 8
-    #     init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.9302</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
-    # -
-    #     model_type: car
-    #     side_id: 2
-    #     id: 9
-    #     init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.9303</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    -
+        model_type: car
+        side_id: 2
+        id: 18
+        init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.9302</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    -
+        model_type: car
+        side_id: 2
+        id: 19
+        init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.9303</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    -
+        model_type: car
+        side_id: 2
+        id: 20
+        init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.9304</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    -
+        model_type: car
+        side_id: 2
+        id: 21
+        init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.9305</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    -
+        model_type: car
+        side_id: 2
+        id: 22
+        init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.9306</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    -
+        model_type: car
+        side_id: 2
+        id: 23
+        init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.9307</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    -
+        model_type: car
+        side_id: 2
+        id: 24
+        init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.9308</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
+    
 topics:
     -
         from: car
         members:
-            - VID
+            - ForceSideID
+            - State
             - longitude
             - latitude
         subscribers:
             - 
                 to: root
                 name_convert:
+                    - {name: ForceSideID}
+                    - {name: State}
                     - {name: longitude}
                     - {name: latitude}
-                    -
-                        src_name: VID
-                        dst_name: ID
     - 
         from: car
         members:

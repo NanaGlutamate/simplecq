@@ -131,8 +131,9 @@ class MyAssembledModel : public CSModelObject {
             load(init, "init_convert", [](auto &from, auto &to) { assert(from == "root"); });
             load(input, "input_convert", [](auto &from, auto &to) { assert(from == "root"); });
             load(output, "output_convert", [](auto &from, auto &to) { assert(from != "root"); });
-            SetState(CSInstanceState::IS_INITIALIZED);
         }
+        
+        SetState(CSInstanceState::IS_INITIALIZED);
 
         std::array<TransformInfo::InputBuffer, 1> buffers{
             TransformInfo::InputBuffer{"root", const_cast<CSValueMap *>(&value), false}};
@@ -227,6 +228,9 @@ class MyAssembledModel : public CSModelObject {
 
         if (auto it = data.find("root"); it != data.end()) {
             outputBuffer = std::move(it->second);
+            if (auto it = outputBuffer.find("State"); it != outputBuffer.end()) {
+                SetState(std::any_cast<uint16_t>(it->second));
+            }
             data.erase(it);
         } else {
             outputBuffer.clear();

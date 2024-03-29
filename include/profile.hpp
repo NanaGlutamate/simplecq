@@ -7,6 +7,8 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <mutex>
+#include <atomic>
 
 #include "stringprocess.hpp"
 
@@ -43,12 +45,15 @@ struct Profiler {
     }
 #ifdef __ENABLE_PROFILE
     void log(const std::string &id, std::chrono::nanoseconds time) {
+        if(auto it = logs.find(id); it == logs.end()) {
+            std::unique_lock<> lock{};
+        }
         logs[id].times++;
         logs[id].totalTime += time;
     }
     struct Log {
         size_t times;
-        std::chrono::nanoseconds totalTime;
+        std::atomic<std::chrono::nanoseconds> totalTime;
     };
     std::map<std::string, Log, std::less<>> logs;
     std::string getResult() {

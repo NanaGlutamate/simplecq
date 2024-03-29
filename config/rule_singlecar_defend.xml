@@ -384,7 +384,7 @@
                                             // | |
                                             var flag = (id_in_formation - 1) % 2
                                             var len = (id_in_formation - flag - 1) / 2
-                                            if (flag) diff.y = 100
+                                            if (flag) diff.y = -100
                                             diff.x = -len * 50
                                         }
                                         diff
