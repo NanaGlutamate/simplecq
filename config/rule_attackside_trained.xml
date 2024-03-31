@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- <?xml-model href="example1.0.xsd"?> -->
+<RuleSet version="1.0">
+    <TypeDefines>
+        <!-- <TypeDefine type="Location">
+            <Variable name="altitude" type="float64" />
+            <Variable name="longitude" type="float64" />
+            <Variable name="latitude" type="float64" />
+        </TypeDefine> -->
+        <TypeDefine type="Vector3">
+            <Variable name="x" type="float64" />
+            <Variable name="y" type="float64" />
+            <Variable name="z" type="float64" />
+        </TypeDefine>
+        <TypeDefine type="BaseInfo">
+            <Variable name="id" type="uint64"/>
+            <Variable name="side" type="uint16"/>
+            <Variable name="type" type="uint16"/>
+            <Variable name="damageLevel" type="uint16"/>
+        </TypeDefine>
+        <TypeDefine type="EntityInfo">
+            <Variable name="baseInfo" type="BaseInfo"/>
+            <Variable name="velocity" type="Vector3"/>
+            <Variable name="position" type="Vector3"/>
+        </TypeDefine>
+        <TypeDefine type="WeaponInfo">
+            <Variable name="ammo" type="int32"/>
+            <Variable name="reloadingState" type="float64"/>
+            <Variable name="range" type="float64"/>
+            <Variable name="direction" type="float64"/>
+            <Variable name="weaponName" type="string"/>
+        </TypeDefine>
+        <TypeDefine type="Pair">
+            <Variable name="a" type="float64"/>
+            <Variable name="b" type="float64"/>
+        </TypeDefine>
+    </TypeDefines>
+    <MetaInfo>
+        <Inputs>
+            <Param name="carInfo" type="EntityInfo[]"/>
+            <Param name="ForceSideID" type="uint16"/>
+        </Inputs>
+        <Outputs>
+            <Param name="targetDir" type="Vector3"/>
+            <Param name="targetVel" type="float64"/>
+            <Param name="enableFire" type="uint32"/>
+            <Param name="formationID" type="uint64"/>
+            <Param name="fireTarget" type="uint64"/>
+        </Outputs>
+        <Caches>
+            <Param name="headIndex" type="Pair">
+                <Value>
+                    <Expression>
+                        {
+                            var i = 0
+                            var head_idx = -1
+                            var enemy_idx = -1
+                            var side = ForceSideID
+                            while(i &lt; carInfo.length()){
+                                var info = carInfo[i].baseInfo
+                                if (info.damageLevel == 0 or info.damageLevel == 1) {
+                                    if (side == info.side and (head_idx == -1 or info.id &lt; carInfo[head_idx].baseInfo.id)){
+                                        head_idx = i
+                                    } else if (side != info.side and (enemy_idx == -1 or info.id &lt; carInfo[enemy_idx].baseInfo.id)){
+                                        enemy_idx = i
+                                    }
+                                }
+                                i = i + 1
+                            }
+                            Pair{.a = head_idx, .b = enemy_idx}
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="distance" type="float64">
+                <Value>
+                    <Expression>
+                        if (headIndex.a == -1 or headIndex.b == -1){
+                            1000000
+                        }else{
+                            var p_self = carInfo[headIndex.a].position
+                            var p_enemy = carInfo[headIndex.b].position
+                            sqrt(pow(p_self.y - p_enemy.y, 2) + pow(p_self.x - p_enemy.x, 2))
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="enemy_direction" type="Vector3">
+                <Value>
+                    <Expression>
+                        if (headIndex.a == -1 or headIndex.b == -1){
+                            Vector3{.x = 1, .y = 0, .z = 0}
+                        }else{
+                            var p_self = carInfo[headIndex.a].position
+                            var p_enemy = carInfo[headIndex.b].position
+                            Vector3{
+                                .x = p_enemy.x - p_self.x,
+                                .y = p_enemy.y - p_self.y,
+                                .z = 0
+                            }
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="side_distance" type="float64"/>
+            <!-- 
+                stage 0: 1
+                stage 1: 5
+                stage 2: 2
+                stage 3: fire
+            -->
+            <Param name="combatStage" type="uint64"/>
+        </Caches>
+    </MetaInfo>
+    <SubRuleSets>
+        <SubRuleSet>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>side_distance &lt; 10</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>side_distance</Target>
+                            <Value>
+                                <Expression>side_distance + 10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>combatStage == 0 and distance &lt; 3001.6883</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>combatStage</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>targetVel</Target>
+                            <Value>
+                                <Expression>16</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>enableFire</Target>
+                            <Value>
+                                <Expression>false</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>formationID</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>combatStage == 0</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>targetDir</Target>
+                            <Value>
+                                <Expression>Vector3{.x = enemy_direction.x + side_distance, .y = enemy_direction.y, .z = 0}</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>targetVel</Target>
+                            <Value>
+                                <Expression>13</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>enableFire</Target>
+                            <Value>
+                                <Expression>false</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>formationID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>combatStage == 1 and distance &lt; 2001.6288</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>combatStage</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>formationID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>targetVel</Target>
+                            <Value>
+                                <Expression>6</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>combatStage == 1</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>targetDir</Target>
+                            <Value>
+                                <Expression>enemy_direction</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <!-- stage == 2 -->
+                        <Expression>combatStage == 2 and distance &lt; 1979.0555</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>combatStage</Target>
+                            <Value>
+                                <Expression>3</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>enableFire</Target>
+                            <Value>
+                                <Expression>true</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <!-- stage == 2 -->
+                        <Expression>true</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>targetDir</Target>
+                            <Value>
+                                <Expression>enemy_direction</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+            </Rules>
+        </SubRuleSet>
+    </SubRuleSets>
+</RuleSet>
