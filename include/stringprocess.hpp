@@ -117,22 +117,17 @@ inline std::string autoIdent(const std::string &s, size_t ident = 0) {
     return ret;
 }
 
-inline std::string removeSpace(std::string_view s) {
-    auto start = s.find_first_not_of(" \t\r\n");
-    if (start == std::string_view::npos) {
-        return {};
-    }
-    auto end = s.find_last_not_of(" \t\r\n");
-    return std::string(s.substr(start, end - start + 1));
-}
-
-inline std::string_view removeSpaceView(std::string_view s) {
+inline constexpr std::string_view removeSpaceView(std::string_view s) {
     auto start = s.find_first_not_of(" \t\r\n");
     if (start == std::string_view::npos) {
         return {};
     }
     auto end = s.find_last_not_of(" \t\r\n");
     return s.substr(start, end - start + 1);
+}
+
+inline constexpr std::string removeSpace(std::string_view s) {
+    return std::string(removeSpaceView(s));
 }
 
 template <std::ranges::range MDSContainer, std::ranges::range BContainer>
