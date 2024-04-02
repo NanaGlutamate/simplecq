@@ -8,6 +8,7 @@
 #include <ranges>
 #include <unordered_map>
 #include <vector>
+#include <type_traits>
 
 #include <taskflow/taskflow.hpp>
 #include <yaml-cpp/yaml.h>
@@ -22,6 +23,17 @@ namespace {
 auto mymin(auto a, auto b) { return a < b ? a : b; }
 
 auto mymax(auto a, auto b) { return a > b ? a : b; }
+
+template <std::invocable<> Func>
+std::expected<std::invoke_result_t<Func>, std::string> doWithCatch(Func&& fun) noexcept {
+    try{
+        return fun();
+    }catch(std::exception& err){
+        return std::unexpected(err.what());
+    }catch(...){
+        return std::unexpected("unhandled exception");
+    }
+}
 
 } // namespace
 
@@ -39,9 +51,14 @@ struct TinyCQ {
         double fps;
     } info{0.};
 
-        struct Scene {
+    struct Scene {
         double x_lower = 0., x_upper = 0., y_lower = 0., y_upper = 0.;
-        std::vector<std::tuple<bool, uint32_t, double, double>> buffer;
+        struct EntityState {
+            bool destroied;
+            uint16_t ForceSideID;
+            double longitude, latitude;
+        };
+        std::vector<EntityState> buffer;
         void addEntity(uint16_t state, uint16_t ForceSideID, double longitude, double latitude) {
             if (x_lower == 0.) {
                 x_lower = x_upper = longitude;
@@ -69,7 +86,7 @@ struct TinyCQ {
                 std::string base = tools::mystr::repeat(" ", row);
                 for (auto &&[d, f, lon, lat] :
                      buffer | std::views::filter([l, y_diff, y_upper{this->y_upper}](auto &ele) {
-                         auto lat = std::get<3>(ele);
+                         auto lat = ele.latitude;
                          return (lat < y_upper - y_diff * l) && (lat >= y_upper - y_diff * (l + 1));
                      })) {
                     base[size_t(floor((lon - x_lower) / x_diff))] = (d ? 'x' : (f == 1 ? '*' : 'o'));
@@ -81,17 +98,26 @@ struct TinyCQ {
         }
     } s;
 
-private:
+  private:
     std::mutex io_lock;
     tf::Executor executor;
     tf::Taskflow frame;
     // model_type_name -> models
     std::unordered_map<std::string, std::vector<ModelInfo>> models;
     // TODO: dynamic created model
+    // TODO: vector<tuple<string, ModelInfo>>
 
     struct TopicInfo {
         std::vector<std::string> members;
         TransformInfo trans;
+        bool containsAllMember(const CSValueMap &data) {
+            for (auto &&name : members) {
+                if (!data.contains(name)) {
+                    return false;
+                }
+            }
+            return true;
+        }
     };
     // model_type_name -> topics
     std::unordered_map<std::string, std::vector<TopicInfo>> topics;
@@ -103,9 +129,9 @@ private:
         std::unordered_map<std::string, std::vector<CSValueMap>> topic_buffer;
     } buffer{0, {}, {}};
 
-public:
+  public:
     TinyCQ() = default;
-    
+
     TinyCQ(const TinyCQ &) = delete;
 
     void clear() {
@@ -127,7 +153,7 @@ public:
         cfg.log_file << std::format("[{}]: {}", level, msg) << std::endl;
     }
 
-    std::string commonCallBack(const std::string & type, const std::unordered_map<std::string, std::any> & param){
+    std::string commonCallBack(const std::string &type, const std::unordered_map<std::string, std::any> &param) {
         // TODO: dynamic create entity
     }
 
@@ -156,22 +182,25 @@ public:
             auto ans = tools::myany::parseXMLString(n["init_value"].as<std::string>());
             if (!ans) {
                 return std::unexpected(
-                    std::format("error when parse {} : {}", n["init_value"].as<std::string>(), ans.error()));
+                    std::format("error when parse \"{}\" : {}", n["init_value"].as<std::string>(), ans.error()));
             }
             if (ans.value().type() != typeid(CSValueMap)) {
                 return std::unexpected(
-                    std::format("error when parse {} : must be CSValueMap", n["init_value"].as<std::string>()));
+                    std::format("error when parse \"{}\" : must be CSValueMap", n["init_value"].as<std::string>()));
             }
             auto value = std::any_cast<CSValueMap>(ans.value());
             value.emplace("ForceSideID", model.obj->GetForceSideID());
             value.emplace("ID", model.obj->GetID());
-            
+
             try {
                 model.obj->Init(value);
             } catch (std::exception &err) {
                 clear();
-                return std::unexpected(std::format("Exception When Model[{}]Init: {}", type, err.what()));;
-            } // catch (...) {}
+                return std::unexpected(std::format("Exception When Model[{}]Init: {}", type, err.what()));
+            } catch (...) {
+                clear();
+                return std::unexpected(std::format("Unhandled Exception When Model[{}]Init", type));
+            }
         }
         for (auto &&n : config["topics"]) {
             TransformInfo trans;
@@ -179,10 +208,8 @@ public:
             for (auto &&sub : n["subscribers"]) {
                 auto to = sub["to"].as<std::string>();
                 for (auto &&convert : sub["name_convert"]) {
-                    auto src =
-                        convert["name"] ? convert["name"].as<std::string>() : convert["src_name"].as<std::string>();
-                    auto dst =
-                        convert["name"] ? convert["name"].as<std::string>() : convert["dst_name"].as<std::string>();
+                    auto src = convert["name"].as<std::string>(convert["src_name"].as<std::string>(""));
+                    auto dst = convert["name"].as<std::string>(convert["dst_name"].as<std::string>(""));
                     trans.rules[from][src].push_back({to, std::move(dst)});
                 }
             }
@@ -199,6 +226,7 @@ public:
         buffer.output_buffer.resize(model_count);
 
         // TODO: parallel between describers
+        // // topic -> task
         // std::unordered_map<std::string, tf::Task> collector;
         // std::unordered_map<std::string, std::string> topic_dependencies;
         // for(auto &&[_, tl] : topics) {
@@ -210,29 +238,21 @@ public:
         // }
 
         // TODO: dynamic created model
-        auto collect_task =
-            frame
-                .emplace([this] {
-                    for (auto &&[target, topics] : buffer.topic_buffer) {
-                        topics.clear();
-                    }
-                    for (auto &&f : buffer.output_buffer) {
-                        for (auto &&[k, v] : f) {
-                            buffer.topic_buffer[k].insert_range(buffer.topic_buffer[k].end(), std::move(v));
-                            v.clear();
-                        }
-                    }
-                    buffer.loop--;
-                })
-                .name("collect output");
+        auto collect_task = frame
+                                .emplace([this] {
+                                    collectTopic();
+                                    buffer.loop--;
+                                })
+                                .name("collect output");
 
         size_t model_id = 0;
         for (auto &&[model_type, model_list] : models) {
             for (auto &&model_info : model_list) {
+                auto it = topics.find(model_type);
                 auto output_task =
                     frame
                         .emplace([this, model_type, obj{model_info.obj}, movable{model_info.outputDataMovable},
-                                  &ret{buffer.output_buffer[model_id]}] {
+                                  &ret{buffer.output_buffer[model_id]}, it] {
                             CSValueMap *model_output_ptr;
                             try {
                                 model_output_ptr = obj->GetOutput();
@@ -240,23 +260,18 @@ public:
                                 writeLog(std::format("Exception When Model[{}]Output: {}", model_type, err.what()), 5);
                                 return;
                             } // catch (...) {}
-                            auto it = topics.find(model_type);
                             if (it == topics.end()) {
                                 return;
                             }
                             for (auto &&topic : it->second) {
-                                [&] {
-                                    for (auto &&name : topic.members) {
-                                        if (!model_output_ptr->contains(name)) {
-                                            return;
-                                        }
-                                    }
-                                    std::array<TransformInfo::InputBuffer, 1> buffer{
-                                        {model_type, model_output_ptr, movable}};
-                                    for (auto &&[n, v] : topic.trans.transform(std::span{buffer})) {
-                                        ret[n].push_back(std::move(v));
-                                    }
-                                }();
+                                if (!topic.containsAllMember(*model_output_ptr)) {
+                                    continue;
+                                }
+                                std::array<TransformInfo::InputBuffer, 1> buffer{
+                                    {model_type, model_output_ptr, movable}};
+                                for (auto &&[n, v] : topic.trans.transform(std::span{buffer})) {
+                                    ret[n].push_back(std::move(v));
+                                }
                             }
                         })
                         .name(std::format("{}[{}]::output", model_type, model_info.obj->GetID()))
@@ -274,8 +289,8 @@ public:
                                     try {
                                         obj->SetInput(v);
                                     } catch (std::exception &err) {
-                                        writeLog(std::format("Exception When Model[{}]Input: {}\n{}", model_type, err.what(),
-                                                             tools::myany::printCSValueMapToString(v)),
+                                        writeLog(std::format("Exception When Model[{}]Input: {}\n{}", model_type,
+                                                             err.what(), tools::myany::printCSValueMapToString(v)),
                                                  5);
                                     }
                                 }
@@ -284,16 +299,17 @@ public:
                         .name(std::format("{}[{}]::input", model_type, model_info.obj->GetID()))
                         .succeed(collect_task);
 
-                auto tick_task = frame
-                                     .emplace([this, obj{model_info.obj}, model_type] {
-                                         try {
-                                             obj->Tick(this->cfg.dt);
-                                         } catch (std::exception &err) {
-                                             writeLog(std::format("Exception When Model[{}]Tick: {}", model_type, err.what()), 5);
-                                         }
-                                     })
-                                     .name(std::format("{}[{}]::tick", model_type, model_info.obj->GetID()))
-                                     .succeed(input_task);
+                auto tick_task =
+                    frame
+                        .emplace([this, obj{model_info.obj}, model_type] {
+                            try {
+                                obj->Tick(this->cfg.dt);
+                            } catch (std::exception &err) {
+                                writeLog(std::format("Exception When Model[{}]Tick: {}", model_type, err.what()), 5);
+                            }
+                        })
+                        .name(std::format("{}[{}]::tick", model_type, model_info.obj->GetID()))
+                        .succeed(input_task);
 
                 auto loop_condition =
                     frame.emplace([this] { return buffer.loop != 0 ? 0 : 1; })
@@ -305,7 +321,7 @@ public:
             }
         }
     }
-    
+
     void run(size_t times = 1) {
         buffer.loop = times;
         auto p = std::chrono::high_resolution_clock::now();
@@ -315,7 +331,7 @@ public:
         info.fps =
             double(times) / (t2 * std::chrono::microseconds::period::num / std::chrono::microseconds::period::den);
     }
-    
+
     void printBuffer() {
         for (auto &&[tar, l] : buffer.topic_buffer) {
             std::cout << tar << ":" << std::endl;
@@ -325,7 +341,7 @@ public:
             }
         }
     }
-    
+
     void draw() {
         if (auto it = buffer.topic_buffer.find("root"); it != buffer.topic_buffer.end()) {
             for (auto &&lonlat : it->second) {
@@ -336,6 +352,19 @@ public:
             }
             std::cout << std::format("fps: {} rate: {}\n\n", info.fps, info.fps * cfg.dt / 1000);
             s.draw(12);
+        }
+    }
+
+  private:
+    void collectTopic() {
+        for (auto &&[target, topics] : buffer.topic_buffer) {
+            topics.clear();
+        }
+        for (auto &&f : buffer.output_buffer) {
+            for (auto &&[k, v] : f) {
+                buffer.topic_buffer[k].insert_range(buffer.topic_buffer[k].end(), std::move(v));
+                v.clear();
+            }
         }
     }
 };

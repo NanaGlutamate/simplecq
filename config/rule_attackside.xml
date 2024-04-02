@@ -117,26 +117,13 @@
             <Rules>
                 <Rule>
                     <Condition>
-                        <Expression>side_distance &lt; -10</Expression>
+                        <Expression>side_distance &lt; 20</Expression>
                     </Condition>
                     <Consequence>
                         <Assignment>
                             <Target>side_distance</Target>
                             <Value>
                                 <Expression>side_distance + 10</Expression>
-                            </Value>
-                        </Assignment>
-                    </Consequence>
-                </Rule>
-                <Rule>
-                    <Condition>
-                        <Expression>side_distance &gt; 10</Expression>
-                    </Condition>
-                    <Consequence>
-                        <Assignment>
-                            <Target>side_distance</Target>
-                            <Value>
-                                <Expression>side_distance - 10</Expression>
                             </Value>
                         </Assignment>
                     </Consequence>

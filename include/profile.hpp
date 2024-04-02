@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+#ifdef __ENABLE_PROFILE
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -11,6 +13,7 @@
 #include <atomic>
 
 #include "stringprocess.hpp"
+#endif
 
 struct Profiler {
     struct Counter {
