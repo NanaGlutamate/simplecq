@@ -274,7 +274,7 @@ class MyAssembledModel : public CSModelObject {
     CSValueMap initValue;
     CSValueMap outputBuffer;
     TransformInfo init, input, output;
-    std::unordered_map<std::string, ModelInfo> subModels;
+    std::unordered_map<std::string, ModelObjHandle> subModels;
 };
 
 extern "C" {

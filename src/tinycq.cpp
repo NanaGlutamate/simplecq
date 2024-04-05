@@ -6,9 +6,9 @@
 #include <memory>
 #include <mutex>
 #include <ranges>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
-#include <type_traits>
 
 #include <taskflow/taskflow.hpp>
 #include <yaml-cpp/yaml.h>
@@ -25,13 +25,13 @@ auto mymin(auto a, auto b) { return a < b ? a : b; }
 auto mymax(auto a, auto b) { return a > b ? a : b; }
 
 template <std::invocable<> Func>
-std::expected<std::invoke_result_t<Func>, std::string> doWithCatch(Func&& fun) noexcept {
-    try{
+std::expected<std::invoke_result_t<Func>, std::string> doWithCatch(Func &&fun) noexcept {
+    try {
         return fun();
-    }catch(std::exception& err){
+    } catch (std::exception &err) {
         return std::unexpected(err.what());
-    }catch(...){
-        return std::unexpected("unhandled exception");
+    } catch (...) {
+        return std::unexpected("[unhandled exception]");
     }
 }
 
@@ -39,6 +39,8 @@ std::expected<std::invoke_result_t<Func>, std::string> doWithCatch(Func&& fun) n
 
 struct TinyCQ {
     using CSValueMap = std::unordered_map<std::string, std::any>;
+    using ModelType = std::string;
+
     struct Config {
         // ms
         double dt;
@@ -46,6 +48,7 @@ struct TinyCQ {
         bool enable_log;
         std::ofstream log_file;
     } cfg{100, 0, true, {}};
+
     struct Info {
         // ms
         double fps;
@@ -100,12 +103,14 @@ struct TinyCQ {
 
   private:
     std::mutex io_lock;
+
     tf::Executor executor;
     tf::Taskflow frame;
     // model_type_name -> models
-    std::unordered_map<std::string, std::vector<ModelInfo>> models;
+    // std::unordered_map<std::string, std::vector<ModelObjHandle>> models;
+    std::vector<std::tuple<std::string, ModelObjHandle>> models;
     // TODO: dynamic created model
-    // TODO: vector<tuple<string, ModelInfo>>
+    // TODO: vector<tuple<string, ModelObjHandle>>
 
     struct TopicInfo {
         std::vector<std::string> members;
@@ -119,13 +124,15 @@ struct TinyCQ {
             return true;
         }
     };
-    // model_type_name -> topics
+
+    // src type -> sent topics
     std::unordered_map<std::string, std::vector<TopicInfo>> topics;
+
     struct Buffers {
         size_t loop;
-        // model -> model_type_name -> topics
+        // model_id -> target type -> topics
         std::vector<std::unordered_map<std::string, std::vector<CSValueMap>>> output_buffer;
-        // model_type_name -> received topics
+        // target type -> received topics
         std::unordered_map<std::string, std::vector<CSValueMap>> topic_buffer;
     } buffer{0, {}, {}};
 
@@ -146,15 +153,19 @@ struct TinyCQ {
         buffer.topic_buffer.clear();
     }
 
-    void writeLog(const std::string &msg, int32_t level) {
-        if (level < cfg.log_level || !cfg.enable_log)
+    void writeLog(std::string_view src, std::string_view msg, int32_t level) noexcept {
+        if (level < cfg.log_level || !cfg.enable_log || !cfg.log_file)
             return;
         std::unique_lock lock{io_lock};
-        cfg.log_file << std::format("[{}]: {}", level, msg) << std::endl;
+        cfg.log_file << std::format("[{}-{}]: {}", src, level, msg) << std::endl;
     }
 
     std::string commonCallBack(const std::string &type, const std::unordered_map<std::string, std::any> &param) {
         // TODO: dynamic create entity
+        writeLog(
+            "Engine",
+            std::format("Unsupport Callback function call: {}({})", type, tools::myany::printCSValueMapToString(param)),
+            5);
     }
 
     std::expected<void, std::string> init(const std::string &config_file) {
@@ -171,14 +182,12 @@ struct TinyCQ {
         }
         for (auto &&n : config["models"]) {
             auto type = n["model_type"].as<std::string>();
-            models[type].emplace_back(loadModel(dlls[type]));
-            auto &model = models[type].back();
+            models.emplace_back(type, loadModel(dlls[type]));
+            auto &model = std::get<1>(models.back());
             model.outputDataMovable = movable[type];
             model.obj->SetID(n["id"].as<uint64_t>());
             model.obj->SetForceSideID(n["side_id"].as<uint16_t>());
-            model.obj->SetLogFun([this, type](const std::string &msg, uint32_t level) {
-                writeLog(std::format("[{}]: {}", type, msg), level);
-            });
+            model.obj->SetLogFun([this, type](const std::string &msg, uint32_t level) { writeLog(type, msg, level); });
             auto ans = tools::myany::parseXMLString(n["init_value"].as<std::string>());
             if (!ans) {
                 return std::unexpected(
@@ -193,7 +202,10 @@ struct TinyCQ {
             value.emplace("ID", model.obj->GetID());
 
             try {
-                model.obj->Init(value);
+                if (!model.obj->Init(value)) {
+                    clear();
+                    return std::unexpected(std::format("Error when Model[{}]Init: init function return false", type));
+                }
             } catch (std::exception &err) {
                 clear();
                 return std::unexpected(std::format("Exception When Model[{}]Init: {}", type, err.what()));
@@ -219,20 +231,20 @@ struct TinyCQ {
     }
 
     void buildGraph() {
-        size_t model_count = 0;
-        for (auto &&[n, l] : models) {
-            model_count += l.size();
-        }
-        buffer.output_buffer.resize(model_count);
+        buffer.output_buffer.resize(models.size());
 
-        // TODO: parallel between describers
-        // // topic -> task
+        // // TODO: parallel between describers
+        // // target -> task
         // std::unordered_map<std::string, tf::Task> collector;
-        // std::unordered_map<std::string, std::string> topic_dependencies;
-        // for(auto &&[_, tl] : topics) {
-        //     for(auto&& t : tl) {
+        // // src -> target
+        // std::unordered_map<std::string, std::vector<std::string>> collector;
+        // for(auto &&[src, topic_list] : topics) {
+        //     for(auto&& t : topic_list) {
         //         for(auto&& [target, _] : t.trans.rules) {
-        //             collector.emplace(target, {});
+        //             if(collector.find(target) != collector.end())continue;
+        //             collector.emplace(target, frame.emplace([this]{
+        //                 collectTopic(target);
+        //             }));
         //         }
         //     }
         // }
@@ -246,79 +258,79 @@ struct TinyCQ {
                                 .name("collect output");
 
         size_t model_id = 0;
-        for (auto &&[model_type, model_list] : models) {
-            for (auto &&model_info : model_list) {
-                auto it = topics.find(model_type);
-                auto output_task =
-                    frame
-                        .emplace([this, model_type, obj{model_info.obj}, movable{model_info.outputDataMovable},
-                                  &ret{buffer.output_buffer[model_id]}, it] {
-                            CSValueMap *model_output_ptr;
-                            try {
-                                model_output_ptr = obj->GetOutput();
-                            } catch (std::exception &err) {
-                                writeLog(std::format("Exception When Model[{}]Output: {}", model_type, err.what()), 5);
-                                return;
-                            } // catch (...) {}
-                            if (it == topics.end()) {
-                                return;
+        for (auto &&[model_type, model_info] : models) {
+            auto it = topics.find(model_type);
+            auto output_task =
+                frame
+                    .emplace([this, model_type, obj{model_info.obj}, &ret{buffer.output_buffer[model_id]}, it,
+                              movable{model_info.outputDataMovable}] {
+                        CSValueMap *model_output_ptr;
+                        try {
+                            model_output_ptr = obj->GetOutput();
+                        } catch (std::exception &err) {
+                            writeLog("Engine",
+                                     std::format("Exception When Model[{}]Output: {}", model_type, err.what()), 5);
+                            return;
+                        } // catch (...) {}
+                        if (it == topics.end()) {
+                            return;
+                        }
+                        for (auto &&topic : it->second) {
+                            if (!topic.containsAllMember(*model_output_ptr)) {
+                                continue;
                             }
-                            for (auto &&topic : it->second) {
-                                if (!topic.containsAllMember(*model_output_ptr)) {
-                                    continue;
+                            std::array<TransformInfo::InputBuffer, 1> buffer{{model_type, model_output_ptr, movable}};
+                            for (auto &&[n, v] : topic.trans.transform(std::span{buffer})) {
+                                ret[n].push_back(std::move(v));
+                            }
+                        }
+                    })
+                    .name(std::format("{}[{}]::output", model_type, model_info.obj->GetID()))
+                    .precede(collect_task);
+
+            auto init_task = frame.emplace([] { return 0; })
+                                 .name(std::format("{}[{}]::start loop", model_type, model_info.obj->GetID()))
+                                 .precede(output_task);
+
+            auto input_task =
+                frame
+                    .emplace([this, model_type, obj{model_info.obj}] {
+                        if (auto it = buffer.topic_buffer.find(model_type); it != buffer.topic_buffer.end()) {
+                            for (auto &&v : it->second) {
+                                try {
+                                    obj->SetInput(v);
+                                } catch (std::exception &err) {
+                                    writeLog("Engine",
+                                             std::format("Exception When Model[{}]Input: {}\n{}", model_type,
+                                                         err.what(), tools::myany::printCSValueMapToString(v)),
+                                             5);
                                 }
-                                std::array<TransformInfo::InputBuffer, 1> buffer{
-                                    {model_type, model_output_ptr, movable}};
-                                for (auto &&[n, v] : topic.trans.transform(std::span{buffer})) {
-                                    ret[n].push_back(std::move(v));
-                                }
                             }
-                        })
-                        .name(std::format("{}[{}]::output", model_type, model_info.obj->GetID()))
-                        .precede(collect_task);
+                        }
+                    })
+                    .name(std::format("{}[{}]::input", model_type, model_info.obj->GetID()))
+                    .succeed(collect_task);
 
-                auto init_task = frame.emplace([] { return 0; })
-                                     .name(std::format("{}[{}]::start loop", model_type, model_info.obj->GetID()))
-                                     .precede(output_task);
+            auto tick_task =
+                frame
+                    .emplace([this, obj{model_info.obj}, model_type] {
+                        try {
+                            obj->Tick(this->cfg.dt);
+                        } catch (std::exception &err) {
+                            writeLog("Engine", std::format("Exception When Model[{}]Tick: {}", model_type, err.what()),
+                                     5);
+                        }
+                    })
+                    .name(std::format("{}[{}]::tick", model_type, model_info.obj->GetID()))
+                    .succeed(input_task);
 
-                auto input_task =
-                    frame
-                        .emplace([this, model_type, obj{model_info.obj}] {
-                            if (auto it = buffer.topic_buffer.find(model_type); it != buffer.topic_buffer.end()) {
-                                for (auto &&v : it->second) {
-                                    try {
-                                        obj->SetInput(v);
-                                    } catch (std::exception &err) {
-                                        writeLog(std::format("Exception When Model[{}]Input: {}\n{}", model_type,
-                                                             err.what(), tools::myany::printCSValueMapToString(v)),
-                                                 5);
-                                    }
-                                }
-                            }
-                        })
-                        .name(std::format("{}[{}]::input", model_type, model_info.obj->GetID()))
-                        .succeed(collect_task);
+            auto loop_condition =
+                frame.emplace([this] { return buffer.loop != 0 ? 0 : 1; })
+                    .name(std::format("{}[{}]::next frame condition", model_type, model_info.obj->GetID()))
+                    .precede(output_task)
+                    .succeed(tick_task);
 
-                auto tick_task =
-                    frame
-                        .emplace([this, obj{model_info.obj}, model_type] {
-                            try {
-                                obj->Tick(this->cfg.dt);
-                            } catch (std::exception &err) {
-                                writeLog(std::format("Exception When Model[{}]Tick: {}", model_type, err.what()), 5);
-                            }
-                        })
-                        .name(std::format("{}[{}]::tick", model_type, model_info.obj->GetID()))
-                        .succeed(input_task);
-
-                auto loop_condition =
-                    frame.emplace([this] { return buffer.loop != 0 ? 0 : 1; })
-                        .name(std::format("{}[{}]::next frame condition", model_type, model_info.obj->GetID()))
-                        .precede(output_task)
-                        .succeed(tick_task);
-
-                model_id += 1;
-            }
+            model_id += 1;
         }
     }
 
@@ -356,6 +368,9 @@ struct TinyCQ {
     }
 
   private:
+    // // target -> model_id
+    // std::unordered_map<std::string, std::vector<size_t>> ;
+
     void collectTopic() {
         for (auto &&[target, topics] : buffer.topic_buffer) {
             topics.clear();
