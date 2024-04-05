@@ -67,40 +67,40 @@ inline std::string getLibDir() {
     return library_dir_;
 }
 
-struct ModelInfo {
+struct ModelObjHandle {
     ModelDllInterface dll{nullptr, nullptr};
     CSModelObject *obj = nullptr;
     bool outputDataMovable = false;
-    ModelInfo() = default;
-    ModelInfo(const ModelInfo &) = delete;
-    void createAs(ModelInfo& o){
+    ModelObjHandle() = default;
+    ModelObjHandle(const ModelObjHandle &) = delete;
+    void createAs(ModelObjHandle& o){
         o.dll = dll;
         o.obj = dll.createFunc();
         o.outputDataMovable = outputDataMovable;
     }
-    ModelInfo(ModelInfo &&o) : dll(o.dll) {
+    ModelObjHandle(ModelObjHandle &&o) : dll(o.dll) {
         obj = o.obj;
         outputDataMovable = o.outputDataMovable;
         o.obj = nullptr;
     }
-    ~ModelInfo() {
+    ~ModelObjHandle() {
         if (obj) {
             dll.destoryFunc(obj, false);
         }
     }
 };
 
-std::expected<ModelInfo, std::string_view> loadModel(const std::string &dllName) {
-    return loadDll(dllName).and_then([](ModelDllInterface dll) -> std::expected<ModelInfo, std::string_view> {
-        ModelInfo info;
+std::expected<ModelObjHandle, std::string_view> loadModel(const std::string &dllName) {
+    return loadDll(dllName).and_then([](ModelDllInterface dll) -> std::expected<ModelObjHandle, std::string_view> {
+        ModelObjHandle info;
         info.dll = dll;
         info.obj = dll.createFunc();
         return info;
     });
 }
 
-ModelInfo loadModel(ModelDllInterface dll) {
-    ModelInfo info;
+ModelObjHandle loadModel(ModelDllInterface dll) {
+    ModelObjHandle info;
     info.dll = dll;
     info.obj = dll.createFunc();
     return info;
