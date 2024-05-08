@@ -123,8 +123,12 @@ struct TinyCQ {
     std::unordered_map<std::string, std::vector<TopicInfo>> topics;
     struct Buffers {
         size_t loop;
+        template<typename Ty>
+        struct alignas(64) Padding : public Ty {
+            char data[(64 - sizeof(Ty) > 0) ? 64 - sizeof(Ty) : 1];
+        };
         // model -> model_type_name -> topics
-        std::vector<std::unordered_map<std::string, std::vector<CSValueMap>>> output_buffer;
+        std::vector<Padding<std::unordered_map<std::string, std::vector<CSValueMap>>>> output_buffer;
         // model_type_name -> received topics
         std::unordered_map<std::string, std::vector<CSValueMap>> topic_buffer;
     } buffer{0, {}, {}};
