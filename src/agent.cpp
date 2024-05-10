@@ -79,6 +79,9 @@ class AgentModel : public CSModelObject {
             } catch (rapidxml::parse_error &err) {
                 WriteLog(err.what(), 5);
                 WriteLog(s, 5);
+            } catch (std::bad_any_cast& err) {
+                WriteLog(err.what(), 5);
+                WriteLog(s, 5);
             }
         }
         outputBuffer.emplace("ForceSideID", GetForceSideID());
