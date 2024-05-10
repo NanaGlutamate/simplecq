@@ -27,7 +27,12 @@ auto mymax(auto a, auto b) { return a > b ? a : b; }
 template <std::invocable<> Func>
 std::expected<std::invoke_result_t<Func>, std::string> doWithCatch(Func &&fun) noexcept {
     try {
-        return fun();
+        if constexpr (!std::is_same_v<void, std::invoke_result_t<Func>>) {
+            return fun();
+        } else {
+            fun();
+            return {};
+        }
     } catch (std::exception &err) {
         return std::unexpected(err.what());
     } catch (...) {
@@ -37,9 +42,30 @@ std::expected<std::invoke_result_t<Func>, std::string> doWithCatch(Func &&fun) n
 
 } // namespace
 
+struct ModelLoader {
+    std::unordered_map<std::string, ModelDllInterface> dlls;
+    std::unordered_map<std::string, bool> movable;
+    std::tuple<std::string, ModelObjHandle> loadModel(const std::string &type) {
+        auto model = ::loadModel(dlls[type]);
+        model.outputDataMovable = movable[type];
+        return {type, std::move(model)};
+    }
+    std::expected<void, std::string> loadDll(const std::string &name, const std::string &path, bool move) {
+        auto ans = ::loadDll(path);
+        if (!ans) {
+            return std::unexpected(std::string(ans.error()));
+        }
+        dlls[name] = ans.value();
+        movable[name] = move;
+        return std::expected<void, std::string>{};
+    }
+};
+
 struct TinyCQ {
     using CSValueMap = std::unordered_map<std::string, std::any>;
     using ModelType = std::string;
+
+    ModelLoader loader;
 
     struct Config {
         // ms
@@ -110,7 +136,15 @@ struct TinyCQ {
     // std::unordered_map<std::string, std::vector<ModelObjHandle>> models;
     std::vector<std::tuple<std::string, ModelObjHandle>> models;
     // TODO: dynamic created model
-    // TODO: vector<tuple<string, ModelObjHandle>>
+    std::vector<std::tuple<std::string, ModelObjHandle>> dynamicModels;
+
+    struct CreateModelCommand {
+        uint64_t ID;
+        uint16_t sideID;
+        CSValueMap param;
+        std::string type;
+    };
+    std::vector<CreateModelCommand> createModelCommands;
 
     struct TopicInfo {
         std::vector<std::string> members;
@@ -129,16 +163,15 @@ struct TinyCQ {
     std::unordered_map<std::string, std::vector<TopicInfo>> topics;
 
     struct Buffers {
-        size_t loop;
-        template<typename Ty>
-        struct alignas(64) Padding : public Ty {
-            char data[(64 - sizeof(Ty) > 0) ? 64 - sizeof(Ty) : 1];
-        };
-        // model -> model_type_name -> topics
+        template <typename Ty> struct alignas(128) Padding : public Ty {};
+        // model(src) -> model_type_name(target) -> topics
         std::vector<Padding<std::unordered_map<std::string, std::vector<CSValueMap>>>> output_buffer;
         // model_type_name -> received topics
         std::unordered_map<std::string, std::vector<CSValueMap>> topic_buffer;
-    } buffer{0, {}, {}};
+        size_t loop;
+        // dynamic
+        std::vector<Padding<std::unordered_map<std::string, std::vector<CSValueMap>>>> dyn_output_buffer;
+    } buffer{{}, {}, 0, {}};
 
   public:
     TinyCQ() = default;
@@ -166,32 +199,46 @@ struct TinyCQ {
 
     std::string commonCallBack(const std::string &type, const std::unordered_map<std::string, std::any> &param) {
         // TODO: dynamic create entity
-        writeLog(
-            "Engine",
-            std::format("Unsupport Callback function call: {}({})", type, tools::myany::printCSValueMapToString(param)),
-            5);
+        using namespace std::literals;
+        if (type == "CreateEntity"sv) {
+            uint64_t ID = std::any_cast<uint64_t>(param.find("ID")->second);
+            uint16_t sideID = std::any_cast<uint16_t>(param.find("ForceSideID")->second);
+            std::string type = std::any_cast<std::string>(param.find("ModelID")->second);
+            createModelCommands.push_back({ID, sideID, param, std::move(type)});
+        } else {
+            writeLog("Engine",
+                     std::format("Unsupport Callback function call: {}({})", type,
+                                 tools::myany::printCSValueMapToString(param)),
+                     5);
+        }
+        return "";
+    }
+
+    void setModelState(ModelObjHandle &model, uint64_t ID, uint16_t sideID, std::string type) {
+        model.obj->SetID(ID);
+        model.obj->SetForceSideID(sideID);
+        model.obj->SetLogFun(
+            [this, type{std::move(type)}](const std::string &msg, uint32_t level) { writeLog(type, msg, level); });
+        model.obj->SetCommonCallBack(
+            [this](const std::string &type, const std::unordered_map<std::string, std::any> &param) {
+                commonCallBack(type, param);
+                return std::string{};
+            });
     }
 
     std::expected<void, std::string> init(const std::string &config_file) {
-        std::unordered_map<std::string, ModelDllInterface> dlls;
-        std::unordered_map<std::string, bool> movable;
         auto config = YAML::LoadFile(config_file);
         for (auto &&n : config["model_types"]) {
-            auto ans = loadDll(n["dll_path"].as<std::string>());
-            if (!ans) {
-                return std::unexpected(std::string(ans.error()));
+            auto succ = loader.loadDll(n["model_type_name"].as<std::string>(), n["dll_path"].as<std::string>(),
+                                       n["output_movable"].as<bool>(false));
+            if (!succ) {
+                return std::unexpected(succ.error());
             }
-            dlls[n["model_type_name"].as<std::string>()] = ans.value();
-            movable[n["model_type_name"].as<std::string>()] = n["output_movable"].as<bool>(false);
         }
         for (auto &&n : config["models"]) {
             auto type = n["model_type"].as<std::string>();
-            models.emplace_back(type, loadModel(dlls[type]));
-            auto &model = std::get<1>(models.back());
-            model.outputDataMovable = movable[type];
-            model.obj->SetID(n["id"].as<uint64_t>());
-            model.obj->SetForceSideID(n["side_id"].as<uint16_t>());
-            model.obj->SetLogFun([this, type](const std::string &msg, uint32_t level) { writeLog(type, msg, level); });
+            auto &model = std::get<1>(models.emplace_back(loader.loadModel(type)));
+            setModelState(model, n["id"].as<uint64_t>(), n["side_id"].as<uint16_t>(), type);
             auto ans = tools::myany::parseXMLString(n["init_value"].as<std::string>());
             if (!ans) {
                 return std::unexpected(
@@ -205,17 +252,13 @@ struct TinyCQ {
             value.emplace("ForceSideID", model.obj->GetForceSideID());
             value.emplace("ID", model.obj->GetID());
 
-            try {
-                if (!model.obj->Init(value)) {
-                    clear();
-                    return std::unexpected(std::format("Error when Model[{}]Init: init function return false", type));
+            auto res = doWithCatch([&] {
+                if (model.obj->Init(value)) {
+                    throw std::logic_error("init function return false");
                 }
-            } catch (std::exception &err) {
-                clear();
-                return std::unexpected(std::format("Exception When Model[{}]Init: {}", type, err.what()));
-            } catch (...) {
-                clear();
-                return std::unexpected(std::format("Unhandled Exception When Model[{}]Init", type));
+            });
+            if (!res) {
+                return std::unexpected(std::format("Exception When Model[{}]Init: {}", type, res.error()));
             }
         }
         for (auto &&n : config["topics"]) {
@@ -237,7 +280,7 @@ struct TinyCQ {
     void buildGraph() {
         buffer.output_buffer.resize(models.size());
 
-        // // TODO: parallel between describers
+        // // TODO: parallel between subscribers
         // // target -> task
         // std::unordered_map<std::string, tf::Task> collector;
         // // src -> target
@@ -250,13 +293,113 @@ struct TinyCQ {
         //     }
         // }
 
-        // TODO: dynamic created model
         auto collect_task = frame
                                 .emplace([this] {
                                     collectTopic();
                                     buffer.loop--;
                                 })
                                 .name("collect output");
+
+        {
+            tf::Task output_task =
+                frame
+                    .emplace([this](tf::Subflow &sbf) {
+                        // create model
+                        for (auto &&[ID, sideID, param, type] : createModelCommands) {
+                            auto &model = std::get<1>(dynamicModels.emplace_back(loader.loadModel(type)));
+                            setModelState(model, ID, sideID, type);
+                            auto res = doWithCatch([&] {
+                                if (model.obj->Init(param)) {
+                                    throw std::logic_error("init function return false");
+                                }
+                            });
+                            if (!res) {
+                                dynamicModels.pop_back();
+                                writeLog("Engine", std::format("Exception When Create Dynamic Model: {}", res.error()),
+                                         5);
+                            }
+                        }
+                        createModelCommands.clear();
+                        // output
+                        buffer.dyn_output_buffer.resize(dynamicModels.size());
+                        for (auto &&[idx, data] : std::views::enumerate(dynamicModels)) {
+                            auto &&[model_type, handle] = data;
+                            sbf.emplace([this, obj{handle.obj}, model_type, movable{handle.outputDataMovable},
+                                         &ret{buffer.dyn_output_buffer[idx]}] {
+                                auto it = topics.find(model_type);
+                                CSValueMap *model_output_ptr;
+                                doWithCatch([&] {
+                                    model_output_ptr = obj->GetOutput();
+                                }).or_else([&, this](const std::string &err) -> std::expected<void, std::string> {
+                                    writeLog("Engine", std::format("Exception When Dynamic Model Output: {}", err), 5);
+                                    return {};
+                                });
+                                if (it == topics.end()) {
+                                    return;
+                                }
+                                for (auto &&topic : it->second) {
+                                    if (!topic.containsAllMember(*model_output_ptr)) {
+                                        continue;
+                                    }
+                                    std::array<TransformInfo::InputBuffer, 1> buffer{
+                                        {model_type, model_output_ptr, movable}};
+                                    for (auto &&[n, v] : topic.trans.transform(std::span{buffer})) {
+                                        ret[n].push_back(std::move(v));
+                                    }
+                                }
+                            });
+                        }
+                        sbf.join();
+                    })
+                    .name(std::format("dynamic::output"))
+                    .precede(collect_task);
+            tf::Task init_task = frame.emplace([] { return 0; }).name("dynamic::start loop").precede(output_task);
+            tf::Task input_task =
+                frame
+                    .emplace([this](tf::Subflow &sbf) {
+                        for (auto &&[model_type, handle] : dynamicModels) {
+                            sbf.emplace([this, obj{handle.obj}, model_type] {
+                                if (auto it = buffer.topic_buffer.find(model_type); it != buffer.topic_buffer.end()) {
+                                    for (auto &&v : it->second) {
+                                        try {
+                                            obj->SetInput(v);
+                                        } catch (std::exception &err) {
+                                            writeLog("Engine",
+                                                     std::format("Exception When Dynamic Model Input: {}\n{}",
+                                                                 err.what(), tools::myany::printCSValueMapToString(v)),
+                                                     5);
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                        sbf.join();
+                    })
+                    .name("dynamic::input")
+                    .succeed(collect_task);
+            tf::Task tick_task =
+                frame
+                    .emplace([this](tf::Subflow &sbf) {
+                        for (auto &&[model_type, handle] : dynamicModels) {
+                            sbf.emplace([this, obj{handle.obj}] {
+                                try {
+                                    obj->Tick(cfg.dt);
+                                } catch (std::exception &err) {
+                                    writeLog("Engine", std::format("Exception When Dynamic Model Tick: {}", err.what()),
+                                             5);
+                                }
+                            });
+                        }
+                        sbf.join();
+                    })
+                    .name("dynamic::tick")
+                    .succeed(input_task);
+
+            tf::Task loop_condition = frame.emplace([this] { return buffer.loop != 0 ? 0 : 1; })
+                                          .name("dynamic::next frame condition")
+                                          .precede(output_task)
+                                          .succeed(tick_task);
+        }
 
         size_t model_id = 0;
         for (auto &&[model_type, model_info] : models) {
@@ -266,13 +409,12 @@ struct TinyCQ {
                     .emplace([this, model_type, obj{model_info.obj}, &ret{buffer.output_buffer[model_id]}, it,
                               movable{model_info.outputDataMovable}] {
                         CSValueMap *model_output_ptr;
-                        try {
+                        doWithCatch([&] {
                             model_output_ptr = obj->GetOutput();
-                        } catch (std::exception &err) {
-                            writeLog("Engine",
-                                     std::format("Exception When Model[{}]Output: {}", model_type, err.what()), 5);
-                            return;
-                        } // catch (...) {}
+                        }).or_else([&, this](const std::string &err) -> std::expected<void, std::string> {
+                            writeLog("Engine", std::format("Exception When Model[{}]Output: {}", model_type, err.what()), 5);
+                            return {};
+                        });
                         if (it == topics.end()) {
                             return;
                         }
@@ -373,10 +515,12 @@ struct TinyCQ {
     // std::unordered_map<std::string, std::vector<size_t>> ;
 
     void collectTopic() {
+        // TODO: parallel
         for (auto &&[target, topics] : buffer.topic_buffer) {
             topics.clear();
         }
-        for (auto &&f : buffer.output_buffer) {
+        std::array output{buffer.output_buffer, buffer.dyn_output_buffer};
+        for (auto &&f : output | std::views::join) {
             for (auto &&[k, v] : f) {
                 buffer.topic_buffer[k].insert_range(buffer.topic_buffer[k].end(), std::move(v));
                 v.clear();
@@ -404,14 +548,14 @@ struct TinyCQ {
 // }
 
 struct CommandReceiver {
-    TinyCQ& cq;
+    TinyCQ &cq;
     bool processCommand(std::string_view command) {}
     void replMode() {
-        for(;;){
+        for (;;) {
             std::string command;
             std::cout << ">" << std::endl;
             std::cin >> command;
-            if(!processCommand(command)){
+            if (!processCommand(command)) {
                 return;
             }
         }

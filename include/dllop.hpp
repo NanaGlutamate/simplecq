@@ -73,12 +73,12 @@ struct ModelObjHandle {
     bool outputDataMovable = false;
     ModelObjHandle() = default;
     ModelObjHandle(const ModelObjHandle &) = delete;
-    void createAs(ModelObjHandle& o){
+    void createAs(ModelObjHandle& o) const {
         o.dll = dll;
         o.obj = dll.createFunc();
         o.outputDataMovable = outputDataMovable;
     }
-    ModelObjHandle(ModelObjHandle &&o) : dll(o.dll) {
+    ModelObjHandle(ModelObjHandle &&o) noexcept : dll(o.dll) {
         obj = o.obj;
         outputDataMovable = o.outputDataMovable;
         o.obj = nullptr;
