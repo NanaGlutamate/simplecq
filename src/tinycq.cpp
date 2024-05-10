@@ -131,6 +131,7 @@ struct TinyCQ {
     struct Buffers {
         size_t loop;
         // model_id -> target type -> topics
+        // std::vector<std::unique_ptr<std::unordered_map<std::string, std::vector<CSValueMap>>>>
         std::vector<std::unordered_map<std::string, std::vector<CSValueMap>>> output_buffer;
         // target type -> received topics
         std::unordered_map<std::string, std::vector<CSValueMap>> topic_buffer;
@@ -237,14 +238,11 @@ struct TinyCQ {
         // // target -> task
         // std::unordered_map<std::string, tf::Task> collector;
         // // src -> target
-        // std::unordered_map<std::string, std::vector<std::string>> collector;
+        // std::unordered_map<std::string, std::vector<std::string>> dependencies;
         // for(auto &&[src, topic_list] : topics) {
         //     for(auto&& t : topic_list) {
         //         for(auto&& [target, _] : t.trans.rules) {
-        //             if(collector.find(target) != collector.end())continue;
-        //             collector.emplace(target, frame.emplace([this]{
-        //                 collectTopic(target);
-        //             }));
+
         //         }
         //     }
         // }
@@ -401,6 +399,21 @@ struct TinyCQ {
 //     return true;
 // }
 // }
+
+struct CommandReceiver {
+    TinyCQ& cq;
+    bool processCommand(std::string_view command) {}
+    void replMode() {
+        for(;;){
+            std::string command;
+            std::cout << ">" << std::endl;
+            std::cin >> command;
+            if(!processCommand(command)){
+                return;
+            }
+        }
+    }
+};
 
 int main() {
     // using namespace cq;

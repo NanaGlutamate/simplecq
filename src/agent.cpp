@@ -41,6 +41,7 @@ constexpr auto host = "127.0.0.1";
 class AgentModel : public CSModelObject {
   public:
     AgentModel() = default;
+    
     virtual bool Init(const CSValueMap &value) override {
         auto port = std::any_cast<uint32_t>(value.find("port")->second);
         SetState(CSInstanceState::IS_INITIALIZED);

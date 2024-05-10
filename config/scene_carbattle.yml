@@ -8,6 +8,7 @@ model_types:
         dll_path: "D:/Desktop/FinalProj/Code/simplecq/config/agent.dll"
         # dll_path: "D:/Desktop/FinalProj/Code/simplecq/config/cq_interpreter.dll"
         output_movable: false
+
 models:
     -
         model_type: car
@@ -55,7 +56,7 @@ models:
         model_type: agent
         side_id: 1
         id: 15
-        init_value: "<c><ForceSideID><uint16_t>1</uint16_t></ForceSideID><enableLog><bool>1</bool></enableLog><port><uint32_t>40023</uint32_t></port><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_attackside.xml</string></filePath></c>"
+        init_value: "<c><ForceSideID><uint16_t>1</uint16_t></ForceSideID><enableLog><bool>1</bool></enableLog><port><uint32_t>40023</uint32_t></port><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_attackside_trained.xml</string></filePath></c>"
     -
         model_type: car
         side_id: 2
@@ -101,9 +102,9 @@ models:
         side_id: 2
         id: 24
         init_value: "<c><enableLog><bool>0</bool></enableLog><longitude><double>32.9308</double></longitude><latitude><double>30.8</double></latitude><altitude><double>0</double></altitude><filePath><string>D:/Desktop/FinalProj/Code/simplecq/config/rule_singlecar_defend.xml</string></filePath></c>"
-    
+
 topics:
-    -
+    - 
         from: car
         members:
             - ForceSideID
