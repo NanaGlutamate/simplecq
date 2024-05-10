@@ -3,6 +3,7 @@ config:
     restart_key: restart
     side_filter: side
     log_level: 1
+
 models:
     - 
         dll_name: "D:/Desktop/FinalProj/Code/simplecq/config/CarPhyModel.dll"
@@ -12,6 +13,7 @@ models:
         dll_name: "D:/Desktop/FinalProj/Code/simplecq/config/ruleset.dll"
         model_name: beh
         output_movable: false
+
 init_convert:
     - 
         to: phy
@@ -25,6 +27,7 @@ init_convert:
             - {name: filePath}
             - {name: enableLog}
             - {name: ForceSideID}
+
 input_convert: 
     - 
         to: phy
@@ -40,6 +43,7 @@ input_convert:
             - {name: enableFire}
             - {name: formationID}
             - {name: fireTarget}
+
 output_convert:
     - 
         from: phy

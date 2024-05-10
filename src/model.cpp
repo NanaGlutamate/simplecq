@@ -229,7 +229,7 @@ class MyAssembledModel : public CSModelObject {
         if (auto it = data.find("root"); it != data.end()) {
             outputBuffer = std::move(it->second);
             if (auto it = outputBuffer.find("State"); it != outputBuffer.end()) {
-                SetState(std::any_cast<uint16_t>(it->second));
+                SetState(static_cast<CSInstanceState>(std::any_cast<uint16_t>(it->second)));
             }
             data.erase(it);
         } else {

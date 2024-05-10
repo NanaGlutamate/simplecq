@@ -1,12 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- <?xml-model href="example1.0.xsd"?> -->
 <RuleSet version="1.0">
     <TypeDefines>
-        <!-- <TypeDefine type="Location">
-            <Variable name="altitude" type="float64" />
-            <Variable name="longitude" type="float64" />
-            <Variable name="latitude" type="float64" />
-        </TypeDefine> -->
         <TypeDefine type="Vector3">
             <Variable name="x" type="float64" />
             <Variable name="y" type="float64" />
@@ -252,6 +246,44 @@
                     <Condition>
                         <!-- stage == 2 -->
                         <Expression>true</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>targetDir</Target>
+                            <Value>
+                                <Expression>enemy_direction</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>damageLevel == max - 1 and distance > 100</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>Action</Target>
+                            <Value>
+                                <Expression>enemy_direction</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>enemy_direction</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param2</Target>
+                            <Value>
+                                <Expression>enemy_direction</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>damageLevel == max - 1</Expression>
                     </Condition>
                     <Consequence>
                         <Assignment>
