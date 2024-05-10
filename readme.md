@@ -1,6 +1,12 @@
 # SimpleCQ
 
-a simple, tiny, fast replacement for CQ-Sim
+A 
+* simple(only necessary functionality included),
+* tiny(2 main class),
+* easy-to-debug(one process only),
+* fast(20x faster in test case)
+  
+replacement for CQ-Sim
 
 包含三个部分：
 * assembled model - 用于替换CQSim中的组合模型，速度更快、功能更多，并且支持模型级别的重启（无需通过RPC调用平台接口）
