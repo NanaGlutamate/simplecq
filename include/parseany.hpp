@@ -39,14 +39,14 @@ struct XMLFormat {
     inline static constexpr auto Spliter = "";
 };
 
-std::string toXML(const std::any &v) { return printAnyToString<XMLFormat>(v); }
+inline std::string toXML(const std::any &v) { return printAnyToString<XMLFormat>(v); }
 
 enum struct parseError {
     different_type_in_same_list,
     unknown_type,
 };
 
-std::expected<std::any, parseError> parseXML(rapidxml::xml_node<char> *node) {
+inline std::expected<std::any, parseError> parseXML(rapidxml::xml_node<char> *node) {
     using namespace std;
     using namespace literals;
     if (node->name() == "li"sv) {
@@ -108,7 +108,7 @@ std::expected<std::any, parseError> parseXML(rapidxml::xml_node<char> *node) {
     }
 }
 
-std::expected<std::any, parseError> parseXMLString(const std::string &node) {
+inline std::expected<std::any, parseError> parseXMLString(const std::string &node) {
     size_t strLen = node.size() + 1;
     auto buffer = std::make_unique<char[]>(strLen);
     memcpy(buffer.get(), node.c_str(), strLen);

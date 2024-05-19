@@ -5,8 +5,8 @@ model_types:
         output_movable: true
     -
         model_type_name: agent
-        dll_path: "D:/Desktop/FinalProj/Code/simplecq/config/agent.dll"
-        # dll_path: "D:/Desktop/FinalProj/Code/simplecq/config/cq_interpreter.dll"
+        # dll_path: "D:/Desktop/FinalProj/Code/simplecq/config/agent.dll"
+        dll_path: "D:/Desktop/FinalProj/Code/simplecq/config/cq_interpreter.dll"
         output_movable: false
 
 models:

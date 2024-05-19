@@ -19,13 +19,13 @@ struct TransformInfo {
     // from, srcname, action
     std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Action>>> rules;
     template <size_t N>
-    std::unordered_map<std::string, std::unordered_map<std::string, std::any>> transform(std::span<InputBuffer, N> buffers) {
+    [[gnu::hot]] std::unordered_map<std::string, std::unordered_map<std::string, std::any>> transform(std::span<InputBuffer, N> buffers) const {
         std::unordered_map<std::string, std::unordered_map<std::string, std::any>> ret;
         transform(ret, buffers);
         return ret;
     }
     template <size_t N>
-    void transform(std::unordered_map<std::string, std::unordered_map<std::string, std::any>>& ret, std::span<InputBuffer, N> buffers) {
+    [[gnu::hot]] void transform(std::unordered_map<std::string, std::unordered_map<std::string, std::any>>& ret, std::span<InputBuffer, N> buffers) const {
         for (auto &&[bufferName, data, movable] : buffers) {
             if (auto it = rules.find(bufferName); it != rules.end()) {
                 for (auto &&[name, value] : *data) {

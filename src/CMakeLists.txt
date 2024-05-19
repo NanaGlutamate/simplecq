@@ -5,11 +5,11 @@ file(GLOB_RECURSE GRPC_GEN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/agentrpc/**.cc)
 
 add_subdirectory(agentrpc)
 
-add_executable(main main.cpp)
-add_executable(test test.cpp)
-add_executable(tinycq tinycq.cpp)
-add_library(mymodel SHARED model.cpp)
-add_library(agent SHARED agent.cpp ${GRPC_GEN_SRC})
+add_executable(main main.cpp dllop.cpp)
+add_executable(test test.cpp dllop.cpp)
+add_executable(tinycq tinycq.cpp dllop.cpp engine/console.cpp)
+add_library(mymodel SHARED model.cpp dllop.cpp)
+add_library(agent SHARED agent.cpp ${GRPC_GEN_SRC} mysock.cpp)
 add_library(yaml ${YAML_SRC})
 
 add_dependencies(test mymodel)
