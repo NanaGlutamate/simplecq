@@ -58,13 +58,18 @@ inline std::expected<void, std::string> editcfg(ConsoleApp &app, const std::vect
     return std::unexpected("unknown cfg, input \"cfg\" to show all cfg");
 }
 
+inline std::expected<void, std::string> print(ConsoleApp &app, const std::vector<std::string_view> &line) {
+    app.printBuffer();
+    return {};
+}
+
 }; // namespace
 
 // TODO: reload file, store cfg / load cfg file
 
 std::map<std::string, ConsoleApp::Command, std::less<>> ConsoleApp::commandCallbacks{
-    {"load", {1, load}},    {"run", {1, run}}, {"cfg", {0, allcfg}}, {"get", {1, showcfg}},
-    {"set", {2, editcfg}}, {"l", {1, load}},  {"r", {1, run}},
+    {"load", {1, load}},   {"l", {1, load}},      {"run", {1, run}},     {"r", {1, run}},   {"cfg", {0, allcfg}},
+    {"get", {1, showcfg}}, {"set", {2, editcfg}}, {"print", {0, print}}, {"p", {0, print}},
 };
 
 void ConsoleApp::initCfg() {
