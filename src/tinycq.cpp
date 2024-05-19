@@ -4,7 +4,7 @@
 
 int main() {
     ConsoleApp app;
-    
+    app.initCfg();
     app.replMode();
     // TinyCQ cq;
     // CommandReceiver cr{cq};
