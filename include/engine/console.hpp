@@ -19,6 +19,7 @@
 #include "yaml-cpp/yaml.h"
 
 #include "engine/executionengine.hpp"
+#include "config.hpp"
 
 struct Scene {
     double x_lower = 0., x_upper = 0., y_lower = 0., y_upper = 0.;
@@ -75,6 +76,9 @@ struct ConsoleApp {
         std::function<std::expected<void, std::string>(ConsoleApp &, const std::vector<std::string_view> &)> callback;
     };
     static std::map<std::string, Command, std::less<>> commandCallbacks;
+    Config cfg;
+
+    void initCfg();
 
     std::expected<void, std::string> processCommand(std::string_view command) {
         auto line = std::views::split(command, ' ') |
@@ -102,7 +106,7 @@ struct ConsoleApp {
 
     void replMode() {
         std::string command;
-        for (;;) {
+        while (std::cin && !std::cin.eof()) {
             std::cout << ">>> ";
             std::getline(std::cin, command);
             processCommand(command).or_else([](const std::string &err) -> std::expected<void, std::string> {

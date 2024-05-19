@@ -26,7 +26,7 @@ struct CallbackHandler {
     size_t log_level = 0;
     bool enable_log = true;
     std::ofstream log_file = {};
-    std::string curr_log_file = "None";
+    // std::string curr_log_file = "None";
 
     struct CreateModelCommand {
         uint64_t ID;

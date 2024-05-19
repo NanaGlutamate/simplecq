@@ -66,7 +66,6 @@ struct ModelManager {
     std::expected<void, std::string> loadDll(const std::string &name, const std::string &path, bool move) {
         return loader.loadDll(name, path, move);
     }
-    // TODO: process dynamic create
     void createDynamicModel() {
         for (auto &&[ID, sideID, param, type] : callback.createModelCommands) {
             if (auto res = createModel(ID, sideID, type, param, true); !res) {
