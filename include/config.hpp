@@ -64,7 +64,7 @@ struct Config {
     const std::string &getValue(const std::string &key) {
         auto it = data.find(key);
         if (it == data.end()) {
-            static std::string fallback = "[nil]";
+            static std::string fallback = "[unspecified]";
             return fallback;
         }
         return it->second;
