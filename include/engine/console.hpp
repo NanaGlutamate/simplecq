@@ -144,6 +144,7 @@ struct ConsoleApp {
         engine.clear();
         auto config = YAML::LoadFile(config_file);
         for (auto &&n : config["model_types"]) {
+            // TODO: composed scene with relative file path
             auto succ = engine.mm.loadDll(n["model_type_name"].as<std::string>(), n["dll_path"].as<std::string>(),
                                           n["output_movable"].as<bool>(false));
             if (!succ) {
