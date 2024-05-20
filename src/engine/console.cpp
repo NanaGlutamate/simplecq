@@ -63,14 +63,27 @@ inline std::expected<void, std::string> print(ConsoleApp &app, const std::vector
     return {};
 }
 
+inline std::expected<void, std::string> models(ConsoleApp &app, const std::vector<std::string_view> &line) {
+    std::cout << "static models:" << std::endl;
+    for (auto &&[name, handle] : app.engine.mm.models) {
+        std::cout << std::format("    {2}::{0}[{1}]", name, handle.obj->GetID(), handle.obj->GetForceSideID())
+                  << std::endl;
+    }
+    std::cout << "dynamic models:" << std::endl;
+    for (auto &&[name, handle] : app.engine.mm.dynamicModels) {
+        std::cout << std::format("    {2}::{0}[{1}]", name, handle.obj->GetID(), handle.obj->GetForceSideID())
+                  << std::endl;
+    }
+    return {};
+}
+
 }; // namespace
 
 // TODO: reload file, store cfg / load cfg file
 
 std::map<std::string, ConsoleApp::Command, std::less<>> ConsoleApp::commandCallbacks{
     {"load", {1, load}},   {"l", {1, load}},      {"run", {1, run}},     {"r", {1, run}},   {"cfg", {0, allcfg}},
-    {"get", {1, showcfg}}, {"set", {2, editcfg}}, {"print", {0, print}}, {"p", {0, print}},
-};
+    {"get", {1, showcfg}}, {"set", {2, editcfg}}, {"print", {0, print}}, {"p", {0, print}}, {"model", {0, models}}};
 
 void ConsoleApp::initCfg() {
     cfg.listen("loglevel", [this](auto &arg) { engine.mm.callback.log_level = std::stoull(arg); });

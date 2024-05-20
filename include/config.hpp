@@ -40,6 +40,7 @@ struct Config {
             }
         }
         f = std::ofstream{filePath};
+        writeFile();
     }
 
     void listen(const std::string &key, std::function<void(const std::string &)> f) {
@@ -50,13 +51,8 @@ struct Config {
     }
 
     void setValue(const std::string &key, std::string value) {
-        data[key] = std::move(value);
+        setValueWithoutWriteFile(key, std::move(value));
         writeFile();
-        auto it = callbacks.find(key);
-        if (it == callbacks.end()) {
-            return;
-        }
-        std::ranges::for_each(it->second, [&v{data[key]}](auto &fun) { fun(v); });
     }
 
     bool isKeyListened(const std::string &key) { return callbacks.contains(key); }
