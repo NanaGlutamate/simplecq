@@ -1,5 +1,7 @@
 #include "engine/console.hpp"
 
+#include <mimalloc-new-delete.h>
+
 namespace {
 
 inline std::expected<void, std::string> load(ConsoleApp &app, const std::vector<std::string_view> &line) {
