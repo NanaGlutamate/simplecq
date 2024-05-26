@@ -7,6 +7,7 @@ model_types:
         model_type_name: agent
         # dll_path: "D:/Desktop/FinalProj/Code/simplecq/config/agent.dll"
         dll_path: "D:/Desktop/FinalProj/Code/simplecq/config/cq_interpreter.dll"
+        # dll_path: "D:/Desktop/FinalProj/Code/simplecq/config/trained_attackside_rule.dll"
         output_movable: false
 
 models:
