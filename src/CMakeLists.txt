@@ -1,4 +1,4 @@
-file(GLOB_RECURSE YAML_SRC ${CMAKE_CURRENT_SOURCE_DIR}/yaml-cpp/**.cpp)
+file(GLOB_RECURSE YAML_SRC ${CMAKE_CURRENT_SOURCE_DIR}/../3rd-party/yaml-cpp/**.cpp)
 file(GLOB_RECURSE GRPC_GEN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/agentrpc/**.cc)
 
 # message(STATUS ${GRPC_GEN_SRC})
