@@ -11,11 +11,11 @@ int main() {
             return {};
         });
     app.engine.frame.dump(std::cout);
-    app.processCommand("r 1000").or_else([](const std::string &err) -> std::expected<void, std::string> {
+    app.draw_rate = 0;
+    app.processCommand("r 2000").or_else([](const std::string &err) -> std::expected<void, std::string> {
         std::cout << err << std::endl;
         return {};
     });
-    app.draw_rate = 0;
     app.draw();
     return 0;
 }

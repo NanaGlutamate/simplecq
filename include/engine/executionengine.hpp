@@ -139,16 +139,16 @@ struct TopicManager {
         }
         for (auto &&output : buffer.dyn_output_buffer) {
             for (auto &&[k, v] : output) {
+                // TODO: remove?
                 if (!buffer.preparing_topic_buffer->contains(k)) {
                     (*buffer.preparing_topic_buffer)[k];
                 }
                 auto it = dependencies.find(k);
-                auto functor = [&, &buffer{buffer}] {
+                tf::Task t = sbf.emplace([&, &buffer{buffer}] {
                     auto &target_buffer = buffer.preparing_topic_buffer->find(k)->second;
                     target_buffer.insert_range(target_buffer.end(), std::move(v));
                     v.clear();
-                };
-                tf::Task t = sbf.emplace(std::move(functor));
+                });
                 if (it != dependencies.end()) {
                     t.succeed(it->second);
                     it->second = t;
@@ -161,7 +161,7 @@ struct TopicManager {
     void staticTopicCollect(const std::string &target) {
         auto &target_buffer = buffer.preparing_topic_buffer->find(target)->second;
         auto it = dependenciesOfTarget.find(target);
-        if (it == dependenciesOfTarget.end()) {
+        if (it == dependenciesOfTarget.end()) [[unlikely]] {
             return;
         }
         for (size_t modelID : it->second) {
@@ -177,16 +177,16 @@ struct TopicManager {
 };
 
 struct ExecutionEngine {
-    tf::Executor executor = tf::Executor{};
-    tf::Taskflow frame = {};
-
-    ModelManager mm = {};
     TopicManager tm = {};
+    ModelManager mm = {};
     struct State {
         double dt = 100; //< deltatime, ms
         size_t loop = 0;
         double fps = 0.;
     } s;
+
+    tf::Executor executor = tf::Executor{};
+    tf::Taskflow frame = {};
 
     void clear() {
         frame.clear();
@@ -201,35 +201,45 @@ struct ExecutionEngine {
         std::string model_type;
         bool movable;
         TopicManager::ClassifiedModelOutput &ret;
-        TopicManager::ModelTopics::const_iterator it;
-        bool end;
+        std::vector<TopicManager::TopicInfo> *topic_list;
+        bool no_output_topic;
         void operator()() {
-            CSValueMap *model_output_ptr;
-            doWithCatch([&] {
+            CSValueMap *model_output_ptr = nullptr;
+            doWithCatch([&, obj{obj}] {
                 model_output_ptr = obj->GetOutput();
             }).or_else([&, this](const std::string &err) -> std::expected<void, std::string> {
                 self.mm.callback.writeLog("Engine", std::format("Exception When Model[{}] Output: {}", model_type, err),
                                           5);
                 return {};
             });
-            if (end) {
+            if (no_output_topic || !model_output_ptr) {
                 return;
             }
             for (auto &&[n, v] : ret) {
                 // TODO:
                 v.clear();
             }
-            for (auto &&topic : it->second) {
+            for (auto &&[cnt, topic] : std::views::enumerate(*topic_list)) {
                 if (!topic.canAssembleFrom(*model_output_ptr)) {
                     continue;
                 }
-                std::array<TransformInfo::InputBuffer, 1> buffer{{model_type, model_output_ptr, movable}};
-                for (auto &&[n, v] : topic.trans.transform(std::span{buffer})) {
-                    ret[n].push_back(std::move(v));
-                }
+                std::array<TransformInfo::InputBuffer, 1> buffer{
+                    {model_type, model_output_ptr, (cnt == topic_list->size() - 1) ? movable : false}};
+                // marks.data.clear();
+                topic.trans.transformWithCallback(
+                    [&, marks{std::set<std::string_view>{}}]<typename Ty>(const std::string &a, const std::string &b,
+                                                                          Ty &&c) mutable {
+                        if (!marks.contains(a)) {
+                            marks.emplace(a);
+                            ret[a].emplace_back();
+                        }
+                        ret.find(a)->second.back().emplace(b, std::forward<Ty>(c));
+                    },
+                    std::span{buffer});
             }
         }
     };
+
     struct ModelInputFunc {
         ExecutionEngine &self;
         CSModelObject *obj;
@@ -250,6 +260,7 @@ struct ExecutionEngine {
             }
         }
     };
+
     struct ModelTickFunc {
         ExecutionEngine &self;
         CSModelObject *obj;
@@ -266,7 +277,6 @@ struct ExecutionEngine {
     };
 
     void buildGraph() {
-        
         std::map<std::string, std::set<std::string>> targets;
         for (auto &&[model_type, topics] : tm.topics) {
             for (auto &&topic : topics) {
@@ -274,71 +284,67 @@ struct ExecutionEngine {
             }
         }
 
-        auto collect_task = frame
-                                .emplace([this](tf::Subflow &sbf) {
-                                    // tm.topicCollect(sbf);
-                                    tm.buffer.swapBuffer();
-                                    s.loop--;
-                                })
-                                .name("collect output");
+        auto collect_task = frame.emplace([this](tf::Subflow &sbf) {
+            // tm.topicCollect(sbf);
+            tm.buffer.swapBuffer();
+            s.loop--;
+        });
+        collect_task.name("collect output");
 
-        auto dyn_collector = frame.emplace([this](tf::Subflow &sbf) { tm.dynamicTopicCollect(sbf); })
-                                 .precede(collect_task)
-                                 .name("collect topic for dyn model");
+        auto dyn_collector = frame.emplace([this](tf::Subflow &sbf) { tm.dynamicTopicCollect(sbf); });
+        dyn_collector.precede(collect_task).name("collect topic for dyn model");
         std::unordered_map<std::string, tf::Task> collector;
         for (auto &&type : targets | std::views::values | std::views::join) {
-            if (tm.buffer.topic_buffer->contains(type)){
+            if (collector.contains(type)) {
                 continue;
             }
-            tm.buffer.topic_buffer->emplace(type, std::vector<CSValueMap>{});
-            tm.buffer.preparing_topic_buffer->emplace(type, std::vector<CSValueMap>{});
-            auto singleTopicCollector = [this, type] { tm.staticTopicCollect(type); };
-            collector[type] = frame.emplace(singleTopicCollector)
-                                  .succeed(dyn_collector)
-                                  .precede(collect_task)
-                                  .name("collect topic for " + type);
+            tf::Task sub_collect_task = frame.emplace([this, type] { tm.staticTopicCollect(type); });
+            sub_collect_task.succeed(dyn_collector).precede(collect_task).name("collect topic for " + type);
+
+            tm.buffer.topic_buffer->emplace(type, TopicManager::ClassifiedModelOutput::mapped_type{});
+            tm.buffer.preparing_topic_buffer->emplace(type, TopicManager::ClassifiedModelOutput::mapped_type{});
+            collector.emplace(type, sub_collect_task);
         }
 
         std::unordered_map<std::string, std::vector<tf::Task>> output_tasks;
 
         // dynamic tasks
-        auto dyn_output_func = [this](tf::Subflow &sbf) {
+        auto dyn_output_task = frame.emplace([this](tf::Subflow &sbf) {
             // create model
             mm.createDynamicModel();
             // output
             tm.buffer.dyn_output_buffer.resize(mm.dynamicModels.size());
             for (auto &&[idx, data] : std::views::enumerate(mm.dynamicModels)) {
                 auto it = tm.topics.find(data.modelTypeName);
+                bool no_output = (it == tm.topics.end());
                 sbf.emplace(ModelOutputFunc{*this, data.handle.obj, data.modelTypeName, data.handle.outputDataMovable,
-                                            tm.buffer.dyn_output_buffer[idx], it, it == tm.topics.end()});
+                                            tm.buffer.dyn_output_buffer[idx], no_output ? nullptr : &it->second,
+                                            no_output});
             }
             sbf.join();
-        };
-        auto dyn_output_task =
-            frame.emplace(dyn_output_func).name(std::format("dynamic::output")).precede(dyn_collector);
+        });
+        dyn_output_task.name(std::format("dynamic::output")).precede(dyn_collector);
 
         auto dyn_init_task = frame.emplace([] { return 0; }).name("dynamic::start loop").precede(dyn_output_task);
 
-        auto dyn_input_func = [this](tf::Subflow &sbf) {
+        auto dyn_input_task = frame.emplace([this](tf::Subflow &sbf) {
             for (auto &&[model_type, handle] : mm.dynamicModels) {
                 sbf.emplace(ModelInputFunc{*this, handle.obj, model_type});
             }
             sbf.join();
-        };
-        auto dyn_input_task = frame.emplace(dyn_input_func).name("dynamic::input").succeed(collect_task);
+        });
+        dyn_input_task.name("dynamic::input").succeed(collect_task);
 
-        auto dyn_tick_func = [this](tf::Subflow &sbf) {
+        auto dyn_tick_task = frame.emplace([this](tf::Subflow &sbf) {
             for (auto &&[model_type, handle] : mm.dynamicModels) {
                 sbf.emplace(ModelTickFunc{*this, handle.obj, model_type});
             }
             sbf.join();
-        };
-        auto dyn_tick_task = frame.emplace(dyn_tick_func).name("dynamic::tick").succeed(dyn_input_task);
+        });
+        dyn_tick_task.name("dynamic::tick").succeed(dyn_input_task);
 
-        auto dyn_loop_condition = frame.emplace([this] { return s.loop != 0 ? 0 : 1; })
-                                      .name("dynamic::next frame condition")
-                                      .precede(dyn_output_task)
-                                      .succeed(dyn_tick_task);
+        auto dyn_loop_condition = frame.emplace([this] { return s.loop != 0 ? 0 : 1; });
+        dyn_loop_condition.name("dynamic::next frame condition").precede(dyn_output_task).succeed(dyn_tick_task);
 
         // static tasks
         tm.buffer.output_buffer.resize(mm.models.size());
@@ -347,11 +353,11 @@ struct ExecutionEngine {
             auto &&[model_type, model_info] = model_entity;
             auto it = tm.topics.find(model_type);
 
-            auto output_task =
-                frame
-                    .emplace(ModelOutputFunc{*this, model_info.obj, model_type, model_info.outputDataMovable,
-                                             tm.buffer.output_buffer[model_id], it, it == tm.topics.end()})
-                    .name(std::format("{}[{}]::output", model_type, model_info.obj->GetID()));
+            bool no_output = (it == tm.topics.end());
+            auto output_task = frame.emplace(
+                ModelOutputFunc{*this, model_info.obj, model_type, model_info.outputDataMovable,
+                                tm.buffer.output_buffer[model_id], no_output ? nullptr : &it->second, no_output});
+            output_task.name(std::format("{}[{}]::output", model_type, model_info.obj->GetID()));
 
             // find dependencies
             for (auto &&target : targets[model_type]) {
@@ -361,24 +367,19 @@ struct ExecutionEngine {
                 }
             }
 
-            auto init_task = frame.emplace([] { return 0; })
-                                 .name(std::format("{}[{}]::start loop", model_type, model_info.obj->GetID()))
-                                 .precede(output_task);
+            auto init_task = frame.emplace([] { return 0; });
+            init_task.name(std::format("{}[{}]::start loop", model_type, model_info.obj->GetID())).precede(output_task);
 
-            auto input_task = frame.emplace(ModelInputFunc{*this, model_info.obj, model_type})
-                                  .name(std::format("{}[{}]::input", model_type, model_info.obj->GetID()))
-                                  .succeed(collect_task);
+            auto input_task = frame.emplace(ModelInputFunc{*this, model_info.obj, model_type});
+            input_task.name(std::format("{}[{}]::input", model_type, model_info.obj->GetID())).succeed(collect_task);
 
-            auto tick_task = frame.emplace(ModelTickFunc{*this, model_info.obj, model_type})
-                                 .name(std::format("{}[{}]::tick", model_type, model_info.obj->GetID()))
-                                 .succeed(input_task);
+            auto tick_task = frame.emplace(ModelTickFunc{*this, model_info.obj, model_type});
+            tick_task.name(std::format("{}[{}]::tick", model_type, model_info.obj->GetID())).succeed(input_task);
 
-            auto loop_condition_func = [this] { return s.loop != 0 ? 0 : 1; };
-            auto loop_condition =
-                frame.emplace(loop_condition_func)
-                    .name(std::format("{}[{}]::next frame condition", model_type, model_info.obj->GetID()))
-                    .precede(output_task)
-                    .succeed(tick_task);
+            auto loop_condition = frame.emplace([this] { return s.loop != 0 ? 0 : 1; });
+            loop_condition.name(std::format("{}[{}]::next frame condition", model_type, model_info.obj->GetID()))
+                .precede(output_task)
+                .succeed(tick_task);
         }
     }
 
