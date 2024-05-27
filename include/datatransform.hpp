@@ -1,10 +1,10 @@
 #pragma once
 
+#include <any>
+#include <cassert>
+#include <span>
 #include <string>
 #include <unordered_map>
-#include <any>
-#include <span>
-#include <cassert>
 
 struct TransformInfo {
     struct Action {
@@ -19,30 +19,36 @@ struct TransformInfo {
     // from, srcname, action
     std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Action>>> rules;
     template <size_t N>
-    [[gnu::hot]] std::unordered_map<std::string, std::unordered_map<std::string, std::any>> transform(std::span<InputBuffer, N> buffers) const {
+    std::unordered_map<std::string, std::unordered_map<std::string, std::any>>
+    transform(std::span<InputBuffer, N> buffers) const {
         std::unordered_map<std::string, std::unordered_map<std::string, std::any>> ret;
         transform(ret, buffers);
         return ret;
     }
     template <size_t N>
-    [[gnu::hot]] void transform(std::unordered_map<std::string, std::unordered_map<std::string, std::any>>& ret, std::span<InputBuffer, N> buffers) const {
+    void transform(std::unordered_map<std::string, std::unordered_map<std::string, std::any>> &ret,
+                   std::span<InputBuffer, N> buffers) const {
         for (auto &&[bufferName, data, movable] : buffers) {
-            if (auto it = rules.find(bufferName); it != rules.end()) {
-                for (auto &&[name, value] : *data) {
-                    if (auto it2 = it->second.find(name); it2 != it->second.end()) {
-                        auto &actions = it2->second;
-                        assert(actions.size());
-                        auto size = actions.size();
-                        if (movable) {
-                            for (size_t i = 0; i < size - 1; ++i) {
-                                ret[actions[i].to][actions[i].dstName] = value;
-                            }
-                            ret[actions[size - 1].to][actions[size - 1].dstName] = std::move(value);
-                        } else {
-                            for (size_t i = 0; i < size; ++i) {
-                                ret[actions[i].to][actions[i].dstName] = value;
-                            }
-                        }
+            auto it = rules.find(bufferName);
+            if (it == rules.end()) {
+                continue;
+            }
+            for (auto &&[name, value] : *data) {
+                auto it2 = it->second.find(name);
+                if (it2 == it->second.end()) {
+                    continue;
+                }
+                auto &actions = it2->second;
+                assert(actions.size());
+                auto size = actions.size();
+                if (movable) {
+                    for (size_t i = 0; i < size - 1; ++i) {
+                        ret[actions[i].to][actions[i].dstName] = value;
+                    }
+                    ret[actions[size - 1].to][actions[size - 1].dstName] = std::move(value);
+                } else {
+                    for (size_t i = 0; i < size; ++i) {
+                        ret[actions[i].to][actions[i].dstName] = value;
                     }
                 }
             }

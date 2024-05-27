@@ -35,7 +35,7 @@ struct ModelManager {
      * @param type model type
      * @param dynamic is dynamically created, should not be false when create in running, or will change model vector
      */
-    std::expected<ModelEntity*, std::string> createModel(uint64_t ID, uint16_t sideID, std::string type,
+    std::expected<ModelEntity*, std::string> createModel(uint64_t ID, uint16_t sideID, const std::string& type,
                                                           const CSValueMap &value, bool dynamic) {
         return loader.loadModel(type).and_then(
             [&, this](ModelEntity entity) -> std::expected<ModelEntity*, std::string> {
@@ -43,7 +43,7 @@ struct ModelManager {
                 auto &model = tar.emplace_back(std::move(entity));
                 model.handle.obj->SetID(ID);
                 model.handle.obj->SetForceSideID(sideID);
-                model.handle.obj->SetLogFun([this, type{std::move(type)}](const std::string &msg, uint32_t level) {
+                model.handle.obj->SetLogFun([this, type](const std::string &msg, uint32_t level) {
                     callback.writeLog(type, msg, level);
                 });
                 model.handle.obj->SetCommonCallBack(

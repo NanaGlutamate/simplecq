@@ -135,9 +135,9 @@ struct ConsoleApp {
                             std::any_cast<double>(lonlat.find("longitude")->second),
                             std::any_cast<double>(lonlat.find("latitude")->second));
             }
-            std::cout << std::format("fps: {} rate: {}\n\n", engine.s.fps, engine.s.fps * engine.s.dt / 1000);
             s.draw(12);
         }
+        std::cout << std::format("fps: {} rate: {}\n\n", engine.s.fps, engine.s.fps * engine.s.dt / 1000);
     }
 
     std::expected<void, std::string> loadFile(const std::string &config_file) {
