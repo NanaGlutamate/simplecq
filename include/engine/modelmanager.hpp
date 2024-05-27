@@ -75,6 +75,7 @@ struct ModelManager {
         callback.createModelCommands.clear();
     }
 
+    // TODO: std::unordered_map<std::string, ModelObjHandle>
     std::vector<ModelEntity> models;
     // dynamic created models
     std::vector<ModelEntity> dynamicModels;
