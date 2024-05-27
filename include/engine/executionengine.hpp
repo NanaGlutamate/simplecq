@@ -40,6 +40,14 @@ struct TopicManager {
     TopicManager() = default;
     TopicManager(const TopicManager &) = delete;
 
+    void clear() {
+        topics.clear();
+        dependenciesOfTarget.clear();
+        // TODO: UB?
+        buffer.~TopicBuffer();
+        new (&buffer) TopicBuffer{};
+    }
+
     struct TopicInfo {
         std::vector<std::string> members;
         TransformInfo trans;
@@ -51,17 +59,17 @@ struct TopicManager {
             }
             return true;
         }
-        // std::set<std::string> getTargets() const {
-        //     std::set<std::string> ret;
-        //     for (auto &&[k, v] : trans.rules) {
-        //         for (auto &&[_, acts] : v) {
-        //             for (auto &&act : acts) {
-        //                 ret.emplace(act.to);
-        //             }
-        //         }
-        //     }
-        //     return ret;
-        // }
+        std::set<std::string> getTargets() const {
+            std::set<std::string> ret;
+            for (auto &&[k, v] : trans.rules) {
+                for (auto &&[_, acts] : v) {
+                    for (auto &&act : acts) {
+                        ret.emplace(act.to);
+                    }
+                }
+            }
+            return ret;
+        }
     };
 
     // src type -> sent topics
@@ -71,96 +79,106 @@ struct TopicManager {
     using ClassifiedModelOutput = std::unordered_map<std::string, std::vector<CSValueMap>>;
 
     struct TopicBuffer {
+        TopicBuffer() {
+            topic_buffer = &buffer0;
+            preparing_topic_buffer = &buffer1;
+        };
+        TopicBuffer(const TopicBuffer &) = delete;
+        void operator=(const TopicBuffer &) = delete;
         // model_id(src) -> model_type_name(target) -> topics
-        std::vector<CacheLinePadding<ClassifiedModelOutput>> output_buffer;
-        std::vector<CacheLinePadding<ClassifiedModelOutput>> dyn_output_buffer;
+        std::vector<CacheLinePadding<ClassifiedModelOutput>> output_buffer = {};
+        std::vector<CacheLinePadding<ClassifiedModelOutput>> dyn_output_buffer = {};
         // model_type_name -> topics received by that model
-        ClassifiedModelOutput topic_buffer;
+        CacheLinePadding<ClassifiedModelOutput> buffer0, buffer1;
+        CacheLinePadding<ClassifiedModelOutput> *topic_buffer = &buffer0;
+        CacheLinePadding<ClassifiedModelOutput> *preparing_topic_buffer = &buffer1;
         // void clearTopicBuffer() {
         //     for (auto &&[k, v] : topic_buffer) {
         //         v.clear();
         //     }
         // }
+        void swapBuffer() { std::swap(topic_buffer, preparing_topic_buffer); }
     } buffer;
 
-    // std::unordered_map<std::string, std::vector<size_t>> dependenciesOfTarget;
-    // TODO: remove collect, deriectly input through output_buffer
-    void topicCollect(tf::Subflow &sbf) {
-        std::unordered_map<std::string_view, tf::Task> dependencies;
-        for (auto &&[target, topics] : buffer.topic_buffer) {
-            dependencies[target] = sbf.emplace([&] { topics.clear(); });
-        }
-        auto doTransform = [&, this](std::vector<CacheLinePadding<ClassifiedModelOutput>> &tar) {
-            for (auto &&output : tar) {
-                for (auto &&[k, v] : output) {
-                    if (!buffer.topic_buffer.contains(k)) {
-                        buffer.topic_buffer[k];
-                    }
-                    auto it = dependencies.find(k);
-                    auto functor = [&, &buffer{buffer}] {
-                        auto &target_buffer = buffer.topic_buffer.find(k)->second;
-                        target_buffer.insert_range(target_buffer.end(), std::move(v));
-                        v.clear();
-                    };
-                    tf::Task t = sbf.emplace(std::move(functor));
-                    if (it != dependencies.end()) {
-                        t.succeed(it->second);
-                        it->second = t;
-                    } else {
-                        dependencies.emplace(k, t);
-                    }
-                }
-            }
-        };
-        doTransform(buffer.output_buffer);
-        doTransform(buffer.dyn_output_buffer);
-        sbf.join();
-    }
-    // void dynamicTopicCollect(tf::Subflow &sbf) {
+    std::unordered_map<std::string, std::vector<size_t>> dependenciesOfTarget;
+    // void topicCollect(tf::Subflow &sbf) {
     //     std::unordered_map<std::string_view, tf::Task> dependencies;
-    //     for (auto &&output : buffer.dyn_output_buffer) {
-    //         for (auto &&[k, v] : output) {
-    //             tf::Task t = sbf.emplace([&, this]() {
-    //                 auto it = buffer.topic_buffer.find(k);
-    //                 if (it == buffer.topic_buffer.end()) {
-    //                     // TODO: warning
-    //                     return;
+    //     for (auto &&[target, topics] : *buffer.topic_buffer) {
+    //         dependencies[target] = sbf.emplace([&] { topics.clear(); });
+    //     }
+    //     auto doTransform = [&, this](std::vector<CacheLinePadding<ClassifiedModelOutput>> &tar) {
+    //         for (auto &&output : tar) {
+    //             for (auto &&[k, v] : output) {
+    //                 if (!buffer.topic_buffer->contains(k)) {
+    //                     (*buffer.topic_buffer)[k];
     //                 }
-    //                 auto &target_buffer = it->second;
-    //                 target_buffer.insert_range(target_buffer.end(), std::move(v));
-    //                 v.clear();
-    //             });
-    //             auto it = dependencies.find(k);
-    //             if (it == dependencies.end()) {
-    //                 dependencies.emplace(k, t);
-    //             } else {
-    //                 t.succeed(it->second);
-    //                 it->second = t;
+    //                 auto it = dependencies.find(k);
+    //                 auto functor = [&, &buffer{buffer}] {
+    //                     auto &target_buffer = buffer.topic_buffer->find(k)->second;
+    //                     target_buffer.insert_range(target_buffer.end(), std::move(v));
+    //                     v.clear();
+    //                 };
+    //                 tf::Task t = sbf.emplace(std::move(functor));
+    //                 if (it != dependencies.end()) {
+    //                     t.succeed(it->second);
+    //                     it->second = t;
+    //                 } else {
+    //                     dependencies.emplace(k, t);
+    //                 }
     //             }
     //         }
-    //     }
+    //     };
+    //     doTransform(buffer.output_buffer);
+    //     doTransform(buffer.dyn_output_buffer);
+    //     sbf.join();
     // }
-    // void staticTopicCollect(const std::string &target) {
-    //     auto &target_buffer = buffer.topic_buffer.find(target)->second;
-    //     auto it = dependenciesOfTarget.find(target);
-    //     if (it == dependenciesOfTarget.end()) {
-    //         return;
-    //     }
-    //     for (size_t modelID : it->second) {
-    //         auto &output = buffer.output_buffer[modelID];
-    //         auto it = output.find(target);
-    //         if (it == output.end()) {
-    //             continue;
-    //         }
-    //         target_buffer.insert_range(target_buffer.end(), std::move(it->second));
-    //         it->second.clear();
-    //     }
-    // }
+    void dynamicTopicCollect(tf::Subflow &sbf) {
+        std::unordered_map<std::string_view, tf::Task> dependencies;
+        for (auto &&[target, topics] : *buffer.preparing_topic_buffer) {
+            dependencies[target] = sbf.emplace([&] { topics.clear(); });
+        }
+        for (auto &&output : buffer.dyn_output_buffer) {
+            for (auto &&[k, v] : output) {
+                if (!buffer.preparing_topic_buffer->contains(k)) {
+                    (*buffer.preparing_topic_buffer)[k];
+                }
+                auto it = dependencies.find(k);
+                auto functor = [&, &buffer{buffer}] {
+                    auto &target_buffer = buffer.preparing_topic_buffer->find(k)->second;
+                    target_buffer.insert_range(target_buffer.end(), std::move(v));
+                    v.clear();
+                };
+                tf::Task t = sbf.emplace(std::move(functor));
+                if (it != dependencies.end()) {
+                    t.succeed(it->second);
+                    it->second = t;
+                } else {
+                    dependencies.emplace(k, t);
+                }
+            }
+        }
+    }
+    void staticTopicCollect(const std::string &target) {
+        auto &target_buffer = buffer.preparing_topic_buffer->find(target)->second;
+        auto it = dependenciesOfTarget.find(target);
+        if (it == dependenciesOfTarget.end()) {
+            return;
+        }
+        for (size_t modelID : it->second) {
+            auto &output = buffer.output_buffer[modelID];
+            auto it = output.find(target);
+            if (it == output.end()) {
+                continue;
+            }
+            target_buffer.insert_range(target_buffer.end(), std::move(it->second));
+            it->second.clear();
+        }
+    }
 };
 
 struct ExecutionEngine {
-    tf::Executor executor;
-    tf::Taskflow frame;
+    tf::Executor executor = tf::Executor{};
+    tf::Taskflow frame = {};
 
     ModelManager mm = {};
     TopicManager tm = {};
@@ -173,7 +191,7 @@ struct ExecutionEngine {
     void clear() {
         frame.clear();
         mm = {};
-        tm = {};
+        tm.clear();
         s = State{};
     };
 
@@ -217,7 +235,7 @@ struct ExecutionEngine {
         CSModelObject *obj;
         std::string model_type;
         void operator()() {
-            if (auto it = self.tm.buffer.topic_buffer.find(model_type); it != self.tm.buffer.topic_buffer.end()) {
+            if (auto it = self.tm.buffer.topic_buffer->find(model_type); it != self.tm.buffer.topic_buffer->end()) {
                 for (auto &&v : it->second) {
                     doWithCatch([&] {
                         obj->SetInput(v);
@@ -248,31 +266,38 @@ struct ExecutionEngine {
     };
 
     void buildGraph() {
-        // TODO: remove collect
+        
+        std::map<std::string, std::set<std::string>> targets;
+        for (auto &&[model_type, topics] : tm.topics) {
+            for (auto &&topic : topics) {
+                targets[model_type].merge(topic.getTargets());
+            }
+        }
+
         auto collect_task = frame
                                 .emplace([this](tf::Subflow &sbf) {
-                                    tm.topicCollect(sbf);
+                                    // tm.topicCollect(sbf);
+                                    tm.buffer.swapBuffer();
                                     s.loop--;
                                 })
                                 .name("collect output");
 
-        // auto dyn_collector = frame
-        //                          .emplace([this]() {
-        //                              tm.buffer.clearTopicBuffer();
-        //                              tm.dynamicTopicCollect(sbf);
-        //                          })
-        //                          .name("collect topic for dyn model");
-        // std::unordered_map<std::string, tf::Task> collector;
-        // for (auto &&type : mm.modelTypes) {
-        //     tm.buffer.topic_buffer[type] = {};
-        //     auto singleTopicCollector = [this, type] {
-        //         tm.staticTopicCollect(type);
-        //     };
-        //     collector[type] = frame.emplace(singleTopicCollector)
-        //                           .succeed(dyn_collector)
-        //                           .precede(collect_task)
-        //                           .name("collect topic for " + type);
-        // }
+        auto dyn_collector = frame.emplace([this](tf::Subflow &sbf) { tm.dynamicTopicCollect(sbf); })
+                                 .precede(collect_task)
+                                 .name("collect topic for dyn model");
+        std::unordered_map<std::string, tf::Task> collector;
+        for (auto &&type : targets | std::views::values | std::views::join) {
+            if (tm.buffer.topic_buffer->contains(type)){
+                continue;
+            }
+            tm.buffer.topic_buffer->emplace(type, std::vector<CSValueMap>{});
+            tm.buffer.preparing_topic_buffer->emplace(type, std::vector<CSValueMap>{});
+            auto singleTopicCollector = [this, type] { tm.staticTopicCollect(type); };
+            collector[type] = frame.emplace(singleTopicCollector)
+                                  .succeed(dyn_collector)
+                                  .precede(collect_task)
+                                  .name("collect topic for " + type);
+        }
 
         std::unordered_map<std::string, std::vector<tf::Task>> output_tasks;
 
@@ -290,7 +315,7 @@ struct ExecutionEngine {
             sbf.join();
         };
         auto dyn_output_task =
-            frame.emplace(dyn_output_func).name(std::format("dynamic::output")).precede(collect_task);
+            frame.emplace(dyn_output_func).name(std::format("dynamic::output")).precede(dyn_collector);
 
         auto dyn_init_task = frame.emplace([] { return 0; }).name("dynamic::start loop").precede(dyn_output_task);
 
@@ -318,13 +343,6 @@ struct ExecutionEngine {
         // static tasks
         tm.buffer.output_buffer.resize(mm.models.size());
 
-        // std::map<std::string, std::set<std::string>> targets;
-        // for (auto &&[model_type, topics] : tm.topics) {
-        //     for (auto &&topic : topics) {
-        //         targets[model_type].merge(topic.getTargets());
-        //     }
-        // }
-
         for (auto &&[model_id, model_entity] : std::views::enumerate(mm.models)) {
             auto &&[model_type, model_info] = model_entity;
             auto it = tm.topics.find(model_type);
@@ -333,18 +351,15 @@ struct ExecutionEngine {
                 frame
                     .emplace(ModelOutputFunc{*this, model_info.obj, model_type, model_info.outputDataMovable,
                                              tm.buffer.output_buffer[model_id], it, it == tm.topics.end()})
-                    .name(std::format("{}[{}]::output", model_type, model_info.obj->GetID()))
-                    .precede(collect_task);
+                    .name(std::format("{}[{}]::output", model_type, model_info.obj->GetID()));
 
-            // // find dependencies
-            // for (auto &&target : targets[model_type]) {
-            //     tm.dependenciesOfTarget[target].push_back(model_id);
-            //     if (auto it = collector.find(target); it != collector.end()) {
-            //         output_task.precede(it->second);
-            //     } else {
-            //         output_task.precede(dyn_collector);
-            //     }
-            // }
+            // find dependencies
+            for (auto &&target : targets[model_type]) {
+                tm.dependenciesOfTarget[target].emplace_back(model_id);
+                if (auto it = collector.find(target); it != collector.end()) {
+                    output_task.precede(it->second);
+                }
+            }
 
             auto init_task = frame.emplace([] { return 0; })
                                  .name(std::format("{}[{}]::start loop", model_type, model_info.obj->GetID()))

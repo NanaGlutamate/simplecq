@@ -117,7 +117,7 @@ struct ConsoleApp {
     }
 
     void printBuffer() {
-        for (auto &&[tar, l] : engine.tm.buffer.topic_buffer) {
+        for (auto &&[tar, l] : *engine.tm.buffer.topic_buffer) {
             std::cout << tar << ":" << std::endl;
             for (auto &&cs : l) {
                 std::cout << "\t";
@@ -128,7 +128,7 @@ struct ConsoleApp {
 
     Scene s;
     void draw() {
-        if (auto it = engine.tm.buffer.topic_buffer.find("root"); it != engine.tm.buffer.topic_buffer.end()) {
+        if (auto it = engine.tm.buffer.topic_buffer->find("root"); it != engine.tm.buffer.topic_buffer->end()) {
             for (auto &&lonlat : it->second) {
                 s.addEntity(std::any_cast<uint16_t>(lonlat.find("State")->second),
                             std::any_cast<uint16_t>(lonlat.find("ForceSideID")->second),
@@ -189,6 +189,6 @@ struct ConsoleApp {
         return std::expected<void, std::string>();
     }
 
-    ExecutionEngine engine;
+    ExecutionEngine engine = {};
     size_t draw_rate = 0;
 };
