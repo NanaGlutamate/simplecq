@@ -43,7 +43,7 @@ struct TopicManager {
     struct TopicInfo {
         std::vector<std::string> members;
         TransformInfo trans;
-        bool containsAllMember(const CSValueMap &data) const {
+        bool canAssembleFrom(const CSValueMap &data) const {
             for (auto &&name : members) {
                 if (!data.contains(name)) {
                     return false;
@@ -88,14 +88,12 @@ struct TopicManager {
     void topicCollect(tf::Subflow &sbf) {
         std::unordered_map<std::string_view, tf::Task> dependencies;
         for (auto &&[target, topics] : buffer.topic_buffer) {
-            dependencies[target] = sbf.emplace([&]{
-                topics.clear();
-            });
+            dependencies[target] = sbf.emplace([&] { topics.clear(); });
         }
         auto doTransform = [&, this](std::vector<CacheLinePadding<ClassifiedModelOutput>> &tar) {
             for (auto &&output : tar) {
                 for (auto &&[k, v] : output) {
-                    if (!buffer.topic_buffer.contains(k)){
+                    if (!buffer.topic_buffer.contains(k)) {
                         buffer.topic_buffer[k];
                     }
                     auto it = dependencies.find(k);
@@ -204,7 +202,7 @@ struct ExecutionEngine {
                 v.clear();
             }
             for (auto &&topic : it->second) {
-                if (!topic.containsAllMember(*model_output_ptr)) {
+                if (!topic.canAssembleFrom(*model_output_ptr)) {
                     continue;
                 }
                 std::array<TransformInfo::InputBuffer, 1> buffer{{model_type, model_output_ptr, movable}};

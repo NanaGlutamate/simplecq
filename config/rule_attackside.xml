@@ -256,7 +256,7 @@
                         </Assignment>
                     </Consequence>
                 </Rule>
-                <Rule>
+                <!-- <Rule>
                     <Condition>
                         <Expression>damageLevel == max - 1 and distance > 100</Expression>
                     </Condition>
@@ -293,7 +293,7 @@
                             </Value>
                         </Assignment>
                     </Consequence>
-                </Rule>
+                </Rule> -->
             </Rules>
         </SubRuleSet>
     </SubRuleSets>
