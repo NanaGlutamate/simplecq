@@ -11,7 +11,7 @@ int main() {
             return {};
         });
     app.engine.frame.dump(std::cout);
-    app.processCommand("r 200").or_else([](const std::string &err) -> std::expected<void, std::string> {
+    app.processCommand("r 1000").or_else([](const std::string &err) -> std::expected<void, std::string> {
         std::cout << err << std::endl;
         return {};
     });

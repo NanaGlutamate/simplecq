@@ -86,16 +86,21 @@ struct TopicManager {
     // std::unordered_map<std::string, std::vector<size_t>> dependenciesOfTarget;
     // TODO: remove collect, deriectly input through output_buffer
     void topicCollect(tf::Subflow &sbf) {
+        std::unordered_map<std::string_view, tf::Task> dependencies;
         for (auto &&[target, topics] : buffer.topic_buffer) {
-            topics.clear();
+            dependencies[target] = sbf.emplace([&]{
+                topics.clear();
+            });
         }
         auto doTransform = [&, this](std::vector<CacheLinePadding<ClassifiedModelOutput>> &tar) {
-            std::unordered_map<std::string_view, tf::Task> dependencies;
             for (auto &&output : tar) {
                 for (auto &&[k, v] : output) {
+                    if (!buffer.topic_buffer.contains(k)){
+                        buffer.topic_buffer[k];
+                    }
                     auto it = dependencies.find(k);
                     auto functor = [&, &buffer{buffer}] {
-                        auto &target_buffer = buffer.topic_buffer[k];
+                        auto &target_buffer = buffer.topic_buffer.find(k)->second;
                         target_buffer.insert_range(target_buffer.end(), std::move(v));
                         v.clear();
                     };
