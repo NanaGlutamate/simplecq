@@ -60,6 +60,7 @@ struct ModelManager {
                     tar.pop_back();
                     return std::unexpected(ans.error());
                 }
+                modelTypes.emplace(type);
                 return &model;
             });
     }
@@ -79,6 +80,7 @@ struct ModelManager {
     std::vector<ModelEntity> models;
     // dynamic created models
     std::vector<ModelEntity> dynamicModels;
+    std::set<std::string> modelTypes;
 
     struct ModelLoader {
         std::expected<ModelEntity, std::string> loadModel(const std::string &type) {

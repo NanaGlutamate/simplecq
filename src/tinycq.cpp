@@ -3,7 +3,7 @@
 #include "engine/modelmanager.hpp"
 
 int main() {
-    ConsoleApp app;
+    ConsoleApp app{};
     app.initCfg();
     app.replMode();
     // TinyCQ cq;

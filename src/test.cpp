@@ -3,7 +3,7 @@
 #include "engine/modelmanager.hpp"
 
 int main() {
-    ConsoleApp app;
+    ConsoleApp app{};
     app.initCfg();
     app.processCommand("l D:/Desktop/FinalProj/Code/simplecq/config/scene_carbattle.yml")
         .or_else([](const std::string &err) -> std::expected<void, std::string> {
@@ -15,6 +15,7 @@ int main() {
         std::cout << err << std::endl;
         return {};
     });
+    app.draw_rate = 0;
     app.draw();
     return 0;
 }
