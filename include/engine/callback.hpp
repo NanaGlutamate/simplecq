@@ -17,6 +17,7 @@
 #include <format>
 #include <any>
 #include <unordered_map>
+#include <mutex>
 
 #include "parseany.hpp"
 
@@ -27,6 +28,7 @@ struct CallbackHandler {
     bool enable_log = true;
     std::ofstream log_file = {};
     // std::string curr_log_file = "None";
+    std::mutex callback_lock;
 
     struct CreateModelCommand {
         uint64_t ID;
@@ -39,6 +41,7 @@ struct CallbackHandler {
     void writeLog(std::string_view src, std::string_view msg, int32_t level) noexcept {
         if (level < log_level || !enable_log || !log_file)
             return;
+        std::unique_lock lock{callback_lock};
         log_file << std::format("[{}-{}]: {}\n", src, level, msg);
     }
     std::string commonCallBack(const std::string &type, const std::unordered_map<std::string, std::any> &param) {
@@ -48,6 +51,7 @@ struct CallbackHandler {
             uint64_t ID = std::any_cast<uint64_t>(param.find("ID")->second);
             uint16_t sideID = std::any_cast<uint16_t>(param.find("ForceSideID")->second);
             std::string type = std::any_cast<std::string>(param.find("ModelID")->second);
+            std::unique_lock lock{callback_lock};
             createModelCommands.push_back({ID, sideID, param, std::move(type)});
         } else {
             writeLog("Engine",
