@@ -18,6 +18,7 @@ struct TransformInfo {
     };
     // from, srcname, action
     std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Action>>> rules;
+
     template <size_t N>
     std::unordered_map<std::string, std::unordered_map<std::string, std::any>>
     transform(std::span<InputBuffer, N> buffers) const {
@@ -25,9 +26,17 @@ struct TransformInfo {
         transform(ret, buffers);
         return ret;
     }
+
     template <size_t N>
     void transform(std::unordered_map<std::string, std::unordered_map<std::string, std::any>> &ret,
                    std::span<InputBuffer, N> buffers) const {
+        transformWithCallback(
+            [&]<typename Ty>(const std::string &a, const std::string &b, Ty &&c) { ret[a][b] = std::forward<Ty>(c); },
+            buffers);
+    }
+
+    template <std::invocable<const std::string &, const std::string &, std::any &> Func, size_t N>
+    void transformWithCallback(Func&& callback, std::span<InputBuffer, N> buffers) const {
         for (auto &&[bufferName, data, movable] : buffers) {
             auto it = rules.find(bufferName);
             if (it == rules.end()) {
@@ -43,12 +52,12 @@ struct TransformInfo {
                 auto size = actions.size();
                 if (movable) {
                     for (size_t i = 0; i < size - 1; ++i) {
-                        ret[actions[i].to][actions[i].dstName] = value;
+                        callback(actions[i].to, actions[i].dstName, value);
                     }
-                    ret[actions[size - 1].to][actions[size - 1].dstName] = std::move(value);
+                    callback(actions[size - 1].to, actions[size - 1].dstName, std::move(value));
                 } else {
                     for (size_t i = 0; i < size; ++i) {
-                        ret[actions[i].to][actions[i].dstName] = value;
+                        callback(actions[i].to, actions[i].dstName, value);
                     }
                 }
             }
