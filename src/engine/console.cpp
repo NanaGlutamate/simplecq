@@ -24,7 +24,7 @@ inline std::expected<void, std::string> run(ConsoleApp &app, const std::vector<s
 }
 
 inline std::expected<void, std::string> allcfg(ConsoleApp &app, const std::vector<std::string_view> &line) {
-    //     std::cout << R"(allowed cfg:
+    // std::cout << R"(allowed cfg:
     //     loglevel: u64,
     //     logfile: str,
     //     enablelog: i8,

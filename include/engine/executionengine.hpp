@@ -14,6 +14,7 @@
 #include <array>
 #include <expected>
 #include <ranges>
+#include <set>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -36,6 +37,9 @@ template <typename Ty>
 struct alignas(128) CacheLinePadding : public Ty {};
 
 struct TopicManager {
+    TopicManager() = default;
+    TopicManager(const TopicManager &) = delete;
+
     struct TopicInfo {
         std::vector<std::string> members;
         TransformInfo trans;
@@ -47,6 +51,17 @@ struct TopicManager {
             }
             return true;
         }
+        // std::set<std::string> getTargets() const {
+        //     std::set<std::string> ret;
+        //     for (auto &&[k, v] : trans.rules) {
+        //         for (auto &&[_, acts] : v) {
+        //             for (auto &&act : acts) {
+        //                 ret.emplace(act.to);
+        //             }
+        //         }
+        //     }
+        //     return ret;
+        // }
     };
 
     // src type -> sent topics
@@ -59,23 +74,85 @@ struct TopicManager {
         // model_id(src) -> model_type_name(target) -> topics
         std::vector<CacheLinePadding<ClassifiedModelOutput>> output_buffer;
         std::vector<CacheLinePadding<ClassifiedModelOutput>> dyn_output_buffer;
-        // model_type_name -> received topics
-        std::unordered_map<std::string, std::vector<CSValueMap>> topic_buffer;
+        // model_type_name -> topics received by that model
+        ClassifiedModelOutput topic_buffer;
+        // void clearTopicBuffer() {
+        //     for (auto &&[k, v] : topic_buffer) {
+        //         v.clear();
+        //     }
+        // }
     } buffer;
 
-    void topicTransform() {
-        // TODO: parallel
+    // std::unordered_map<std::string, std::vector<size_t>> dependenciesOfTarget;
+    // TODO: remove collect, deriectly input through output_buffer
+    void topicCollect(tf::Subflow &sbf) {
         for (auto &&[target, topics] : buffer.topic_buffer) {
             topics.clear();
         }
-        std::array outputs{buffer.output_buffer, buffer.dyn_output_buffer};
-        for (auto &&f : outputs | std::views::join) {
-            for (auto &&[k, v] : f) {
-                buffer.topic_buffer[k].insert_range(buffer.topic_buffer[k].end(), std::move(v));
-                v.clear();
+        auto doTransform = [&, this](std::vector<CacheLinePadding<ClassifiedModelOutput>> &tar) {
+            std::unordered_map<std::string_view, tf::Task> dependencies;
+            for (auto &&output : tar) {
+                for (auto &&[k, v] : output) {
+                    auto it = dependencies.find(k);
+                    auto functor = [&, &buffer{buffer}] {
+                        auto &target_buffer = buffer.topic_buffer[k];
+                        target_buffer.insert_range(target_buffer.end(), std::move(v));
+                        v.clear();
+                    };
+                    tf::Task t = sbf.emplace(std::move(functor));
+                    if (it != dependencies.end()) {
+                        t.succeed(it->second);
+                        it->second = t;
+                    } else {
+                        dependencies.emplace(k, t);
+                    }
+                }
             }
-        }
+        };
+        doTransform(buffer.output_buffer);
+        doTransform(buffer.dyn_output_buffer);
+        sbf.join();
     }
+    // void dynamicTopicCollect(tf::Subflow &sbf) {
+    //     std::unordered_map<std::string_view, tf::Task> dependencies;
+    //     for (auto &&output : buffer.dyn_output_buffer) {
+    //         for (auto &&[k, v] : output) {
+    //             tf::Task t = sbf.emplace([&, this]() {
+    //                 auto it = buffer.topic_buffer.find(k);
+    //                 if (it == buffer.topic_buffer.end()) {
+    //                     // TODO: warning
+    //                     return;
+    //                 }
+    //                 auto &target_buffer = it->second;
+    //                 target_buffer.insert_range(target_buffer.end(), std::move(v));
+    //                 v.clear();
+    //             });
+    //             auto it = dependencies.find(k);
+    //             if (it == dependencies.end()) {
+    //                 dependencies.emplace(k, t);
+    //             } else {
+    //                 t.succeed(it->second);
+    //                 it->second = t;
+    //             }
+    //         }
+    //     }
+    // }
+    // void staticTopicCollect(const std::string &target) {
+    //     auto &target_buffer = buffer.topic_buffer.find(target)->second;
+    //     auto it = dependenciesOfTarget.find(target);
+    //     if (it == dependenciesOfTarget.end()) {
+    //         return;
+    //     }
+    //     for (size_t modelID : it->second) {
+    //         auto &output = buffer.output_buffer[modelID];
+    //         auto it = output.find(target);
+    //         if (it == output.end()) {
+    //             continue;
+    //         }
+    //         target_buffer.insert_range(target_buffer.end(), std::move(it->second));
+    //         it->second.clear();
+    //     }
+    // }
 };
 
 struct ExecutionEngine {
@@ -97,94 +174,104 @@ struct ExecutionEngine {
         s = State{};
     };
 
+    struct ModelOutputFunc {
+        ExecutionEngine &self;
+        CSModelObject *obj;
+        std::string model_type;
+        bool movable;
+        TopicManager::ClassifiedModelOutput &ret;
+        TopicManager::ModelTopics::const_iterator it;
+        bool end;
+        void operator()() {
+            CSValueMap *model_output_ptr;
+            doWithCatch([&] {
+                model_output_ptr = obj->GetOutput();
+            }).or_else([&, this](const std::string &err) -> std::expected<void, std::string> {
+                self.mm.callback.writeLog("Engine", std::format("Exception When Model[{}] Output: {}", model_type, err),
+                                          5);
+                return {};
+            });
+            if (end) {
+                return;
+            }
+            for (auto &&[n, v] : ret) {
+                // TODO:
+                v.clear();
+            }
+            for (auto &&topic : it->second) {
+                if (!topic.containsAllMember(*model_output_ptr)) {
+                    continue;
+                }
+                std::array<TransformInfo::InputBuffer, 1> buffer{{model_type, model_output_ptr, movable}};
+                for (auto &&[n, v] : topic.trans.transform(std::span{buffer})) {
+                    ret[n].push_back(std::move(v));
+                }
+            }
+        }
+    };
+    struct ModelInputFunc {
+        ExecutionEngine &self;
+        CSModelObject *obj;
+        std::string model_type;
+        void operator()() {
+            if (auto it = self.tm.buffer.topic_buffer.find(model_type); it != self.tm.buffer.topic_buffer.end()) {
+                for (auto &&v : it->second) {
+                    doWithCatch([&] {
+                        obj->SetInput(v);
+                    }).or_else([&, this](const std::string &err) -> std::expected<void, std::string> {
+                        self.mm.callback.writeLog("Engine",
+                                                  std::format("Exception When Model[{}] Input: {}\n{}", model_type, err,
+                                                              tools::myany::printCSValueMapToString(v)),
+                                                  5);
+                        return {};
+                    });
+                }
+            }
+        }
+    };
+    struct ModelTickFunc {
+        ExecutionEngine &self;
+        CSModelObject *obj;
+        std::string model_type;
+        void operator()() {
+            doWithCatch([&] {
+                obj->Tick(self.s.dt);
+            }).or_else([this](const std::string &err) -> std::expected<void, std::string> {
+                self.mm.callback.writeLog("Engine", std::format("Exception When Model[{}] Tick: {}", model_type, err),
+                                          5);
+                return {};
+            });
+        }
+    };
+
     void buildGraph() {
-        // // TODO: parallel between subscribers
-        // // target -> task
+        // TODO: remove collect
+        auto collect_task = frame
+                                .emplace([this](tf::Subflow &sbf) {
+                                    tm.topicCollect(sbf);
+                                    s.loop--;
+                                })
+                                .name("collect output");
+
+        // auto dyn_collector = frame
+        //                          .emplace([this]() {
+        //                              tm.buffer.clearTopicBuffer();
+        //                              tm.dynamicTopicCollect(sbf);
+        //                          })
+        //                          .name("collect topic for dyn model");
         // std::unordered_map<std::string, tf::Task> collector;
-        // // src -> target
-        // std::unordered_map<std::string, std::vector<std::string>> dependencies;
-        // for(auto &&[src, topic_list] : topics) {
-        //     for(auto&& t : topic_list) {
-        //         for(auto&& [target, _] : t.trans.rules) {
-
-        //         }
-        //     }
+        // for (auto &&type : mm.modelTypes) {
+        //     tm.buffer.topic_buffer[type] = {};
+        //     auto singleTopicCollector = [this, type] {
+        //         tm.staticTopicCollect(type);
+        //     };
+        //     collector[type] = frame.emplace(singleTopicCollector)
+        //                           .succeed(dyn_collector)
+        //                           .precede(collect_task)
+        //                           .name("collect topic for " + type);
         // }
-        struct ModelOutputFunc {
-            ExecutionEngine &self;
-            CSModelObject *obj;
-            std::string model_type;
-            bool movable;
-            TopicManager::ClassifiedModelOutput &ret;
-            TopicManager::ModelTopics::const_iterator it;
-            bool end;
-            void operator()() {
-                CSValueMap *model_output_ptr;
-                doWithCatch([&] {
-                    model_output_ptr = obj->GetOutput();
-                }).or_else([&, this](const std::string &err) -> std::expected<void, std::string> {
-                    self.mm.callback.writeLog("Engine",
-                                              std::format("Exception When Model[{}] Output: {}", model_type, err), 5);
-                    return {};
-                });
-                if (end) {
-                    return;
-                }
-                for (auto &&[n, v] : ret) {
-                    // TODO:
-                    v.clear();
-                }
-                for (auto &&topic : it->second) {
-                    if (!topic.containsAllMember(*model_output_ptr)) {
-                        continue;
-                    }
-                    std::array<TransformInfo::InputBuffer, 1> buffer{{model_type, model_output_ptr, movable}};
-                    for (auto &&[n, v] : topic.trans.transform(std::span{buffer})) {
-                        ret[n].push_back(std::move(v));
-                    }
-                }
-            }
-        };
-        struct ModelInputFunc {
-            ExecutionEngine &self;
-            CSModelObject *obj;
-            std::string model_type;
-            void operator()() {
-                if (auto it = self.tm.buffer.topic_buffer.find(model_type); it != self.tm.buffer.topic_buffer.end()) {
-                    for (auto &&v : it->second) {
-                        doWithCatch([&] {
-                            obj->SetInput(v);
-                        }).or_else([&, this](const std::string &err) -> std::expected<void, std::string> {
-                            self.mm.callback.writeLog("Engine",
-                                                      std::format("Exception When Model[{}] Input: {}\n{}", model_type,
-                                                                  err, tools::myany::printCSValueMapToString(v)),
-                                                      5);
-                            return {};
-                        });
-                    }
-                }
-            }
-        };
-        struct ModelTickFunc {
-            ExecutionEngine &self;
-            CSModelObject *obj;
-            std::string model_type;
-            void operator()() {
-                doWithCatch([&] {
-                    obj->Tick(self.s.dt);
-                }).or_else([this](const std::string &err) -> std::expected<void, std::string> {
-                    self.mm.callback.writeLog("Engine",
-                                              std::format("Exception When Model[{}] Tick: {}", model_type, err), 5);
-                    return {};
-                });
-            }
-        };
 
-        auto collect_func = [this] {
-            tm.topicTransform();
-            s.loop--;
-        };
-        auto collect_task = frame.emplace(collect_func).name("collect output");
+        std::unordered_map<std::string, std::vector<tf::Task>> output_tasks;
 
         // dynamic tasks
         auto dyn_output_func = [this](tf::Subflow &sbf) {
@@ -227,6 +314,14 @@ struct ExecutionEngine {
 
         // static tasks
         tm.buffer.output_buffer.resize(mm.models.size());
+
+        // std::map<std::string, std::set<std::string>> targets;
+        // for (auto &&[model_type, topics] : tm.topics) {
+        //     for (auto &&topic : topics) {
+        //         targets[model_type].merge(topic.getTargets());
+        //     }
+        // }
+
         for (auto &&[model_id, model_entity] : std::views::enumerate(mm.models)) {
             auto &&[model_type, model_info] = model_entity;
             auto it = tm.topics.find(model_type);
@@ -237,6 +332,16 @@ struct ExecutionEngine {
                                              tm.buffer.output_buffer[model_id], it, it == tm.topics.end()})
                     .name(std::format("{}[{}]::output", model_type, model_info.obj->GetID()))
                     .precede(collect_task);
+
+            // // find dependencies
+            // for (auto &&target : targets[model_type]) {
+            //     tm.dependenciesOfTarget[target].push_back(model_id);
+            //     if (auto it = collector.find(target); it != collector.end()) {
+            //         output_task.precede(it->second);
+            //     } else {
+            //         output_task.precede(dyn_collector);
+            //     }
+            // }
 
             auto init_task = frame.emplace([] { return 0; })
                                  .name(std::format("{}[{}]::start loop", model_type, model_info.obj->GetID()))
