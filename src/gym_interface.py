@@ -50,7 +50,7 @@ class Agent:
         s = self.process_output(self._recv())
         end = self.cal_end(s)
         if end:
-            self.state = State.RUNNING
+            self.state = State.IS_END
         return s, self.cal_reward(s), end, ''
 
     def _restart(self):
