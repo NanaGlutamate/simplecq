@@ -106,5 +106,5 @@ struct ModelManager {
         std::unordered_map<std::string, ModelDllInterface> dlls;
         std::unordered_map<std::string, bool> movable;
     } loader;
-    CallbackHandler callback;
+    inline static CallbackHandler callback = {};
 };

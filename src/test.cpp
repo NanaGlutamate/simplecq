@@ -1,6 +1,7 @@
 #include "engine/console.hpp"
 #include "engine/executionengine.hpp"
 #include "engine/modelmanager.hpp"
+#include "engine/coroutined.hpp"
 
 int main() {
     ConsoleApp app{};
