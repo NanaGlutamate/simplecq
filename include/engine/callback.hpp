@@ -44,7 +44,7 @@ struct CallbackHandler {
         std::unique_lock lock{callback_lock};
         log_file << std::format("[{}-{}]: {}\n", src, level, msg);
     }
-    
+
     std::string commonCallBack(const std::string &type, const std::unordered_map<std::string, std::any> &param) {
         // dynamic create entity
         using namespace std::literals;
@@ -55,7 +55,7 @@ struct CallbackHandler {
                 std::string type = std::any_cast<std::string>(param.find("ModelID")->second);
                 std::unique_lock lock{callback_lock};
                 createModelCommands.push_back({ID, sideID, param, std::move(type)});
-            } catch (std::bad_any_cast &err) {
+            } catch (std::bad_any_cast &) {
                 writeLog("Engine",
                          std::format("Data Type Mismatch while dynamic create entity: {}({})", type,
                                      tools::myany::printCSValueMapToString(param)),
