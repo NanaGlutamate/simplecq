@@ -18,6 +18,11 @@ class State(Enum):
 
 class Agent:
     def __init__(self, outputs_type, port, host='localhost', restart_key='restart', process_output=None, reward_func=None, end_func=None) -> None:
+        '''
+            outputs_type: type of output data, need for communicate with c++
+                example for outputs_type: {'location' : {'x' : 'double', 'y' : 'double', 'z' : 'double'}, 'enemiey_ids' : ['uint64_t']}
+            
+        '''
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind((host, port))
         s.listen()
