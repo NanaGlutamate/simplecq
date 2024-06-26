@@ -15,7 +15,7 @@ def make_xml_data(data, type_def) -> str:
 class State(Enum):
     FIRST_INIT = 1
     RUNNING = 2
-    IS_END = 3
+    END = 3
 
 class Agent:
     def __init__(self, outputs_type, port, host='localhost', restart_key='restart', 
@@ -45,7 +45,7 @@ class Agent:
             self.state = State.RUNNING
             self.init_val = self._recv()
             return self.init_val
-        elif self.state == State.IS_END or self.state == State.RUNNING:
+        elif self.state == State.END or self.state == State.RUNNING:
             self.state = State.RUNNING
             self._restart()
             self._recv()
@@ -61,7 +61,7 @@ class Agent:
         s = self.process_output(self._recv())
         end = self.cal_end(s)
         if end:
-            self.state = State.IS_END
+            self.state = State.END
         return s, self.cal_reward(s), end, ''
 
     def _restart(self):
