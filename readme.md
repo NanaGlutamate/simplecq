@@ -13,22 +13,33 @@ replacement for CQ-Sim
 * agent model - 代理模型，毕设使用
 * sim controller - 主程序，加载yml格式的想定文件
 
------
+# 使用方法
+
 ## assembled model (mymodel.dll)
 
 组合模型，与CQ中组合模型基本一致，加载组合模型描述文件（如```config/assamble.yml```）
 
-在原本模型的基础上支持模型级别的重启
+### 模型重启
 
------
+在原本模型的基础上支持模型级别的重启，如果：
+
+1. 组合模型描述文件中```config```项包含```restart_key```
+2. 当前帧通过任意一次```SetInput```调用收到的主题数据包含上述```restart_key```指定的值
+
+那么组合模型将会在下一帧的```GetOutput```函数调用之前释放并重新创建当前管理的原子模型、以想定最开始的```Init```函数调用中传入的初始化参数重新初始化各个原子模型
+
+### 组合模型描述文件
+
+
+
 ## agent model (agent.dll)
 
 代理模型，利用socket与训练环境通信，包含数据序列化与反序列化
 
+### python接口
 
-TODO: use asio/grpc instead of OS-provided socket.
+gym环境风格的代理模型python接口，配置代理模型ip与端口后与其建立连接，在python环境与仿真环境间转发数据
 
------
 ## sim controller (tinycq.exe)
 
 类似于CQSim的运控工具，基于taskflow完成了并行化，支持发布订阅模型下的数据交互
@@ -38,12 +49,15 @@ TODO: use asio/grpc instead of OS-provided socket.
 2. 模型数据检查
 3. 分布式仿真
 
-### 使用方法
+### 使用流程
 
 仿真控制器为交互式的控制台工具，主要使用流程为：
+
 1. 使用```load [filepath]```命令加载想定描述文件
 2. 使用```edit [config] [value]```命令修改仿真设置
 3. 使用```r [times]```命令开始仿真运行
+
+控制器接受的其他命令可以通过输入```help```获取
 
 ### 想定描述文件
 
@@ -65,11 +79,53 @@ TODO: use asio/grpc instead of OS-provided socket.
       1. ```to```：订阅者模型类型
       2. ```name_convert```：名称转换关系，即将主题中的名称转换为对应模型```SetInput```函数接受的名称
 
------
-### others
+### 性能分析
 
 to collect taskflow profile, run
 ```shell
-$env:TF_ENABLE_PROFILER="D:\Desktop\FinalProj\Code\simplecq\config\simple.json"
+$env:TF_ENABLE_PROFILER="[PATH_TO_TARGET_DIR]\simple.json"
 ```
 before run tinycq.exe
+
+### 可视化
+
+TODO: 
+
+# 文件结构
+
+## src/
+
+主要源码目录，包含文件：
+
+1. agent.cpp：代理模型源码
+2. dllop.cpp：DLL相关操作
+3. gym_interface.py：代理模型的python接口
+4. main.cpp：暂时弃用
+5. model.cpp：代理模型源码
+6. mysock.cpp：socket通信相关源码
+7. test.cpp：测试项目
+8. tinycq.cpp：tinycq.exe主程序
+
+### src/agentrpc/
+
+暂时弃用
+
+### src/engine/
+
+tinycq控制台接口相关源码
+
+## include/
+
+头文件目录
+
+### include/engine/
+
+tinycq控制台接口相关头文件
+
+## config/
+
+配置文件，主要来自示例想定
+
+## 3rd-party/
+
+第三方源码与其开源协议
