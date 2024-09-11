@@ -1,16 +1,39 @@
 import socket
 from enum import Enum
 
-def make_xml_data(data, type_def) -> str:
-    match type_def:
-        case str(atomic_type):
-            assert atomic_type in {"bool", "int8_t", "uint8_t", "int16_t", "uint16_t", "int32_t", "uint32_t", "int64_t", "uint64_t", "float", "double"}
-            if atomic_type == 'bool': return f'<{atomic_type}>{1 if data else 0}</{atomic_type}>'
-            return f'<{atomic_type}>{data}</{atomic_type}>'
-        case list(l):
-            return f'<li>{''.join(make_xml_data(value, l[0]) for value in data)}</li>'
-        case dict(c):
-            return f'<c>{''.join(f'<{name}>{make_xml_data(value, c[name])}</{name}>' for name, value in data)}</c>'
+# def make_xml_data(data, type_def) -> str:
+#     match type_def:
+#         case str(atomic_type):
+#             assert atomic_type in {"bool", "int8_t", "uint8_t", "int16_t", "uint16_t", "int32_t", "uint32_t", "int64_t", "uint64_t", "float", "double"}
+#             if atomic_type == 'bool': return f'<{atomic_type}>{1 if data else 0}</{atomic_type}>'
+#             return f'<{atomic_type}>{data}</{atomic_type}>'
+#         case list(l):
+#             return f'<li>{''.join(make_xml_data(value, l[0]) for value in data)}</li>'
+#         case dict(c):
+#             return f'<c>{''.join(f'<{name}>{make_xml_data(value, c[name])}</{name}>' for name, value in data)}</c>'
+def make_xml_data(data, type_def):
+    if isinstance(type_def, str):
+        atomic_type = type_def
+        assert atomic_type in {
+            "bool", "int8_t", "uint8_t", "int16_t", "uint16_t", 
+            "int32_t", "uint32_t", "int64_t", "uint64_t", 
+            "float", "double"
+        }
+        if atomic_type == 'bool': 
+            return f'<{atomic_type}>{1 if data else 0}</{atomic_type}>'
+        return f'<{atomic_type}>{data}</{atomic_type}>'
+
+    elif isinstance(type_def, list):
+        l = type_def
+        return f'<li>{"".join(make_xml_data(value, l[0]) for value in data)}</li>'
+
+    elif isinstance(type_def, dict):
+        c = type_def
+        return f'<c>{"".join(f"<{name}>{make_xml_data(value, c[name])}</{name}>" for name, value in data.items())}</c>'
+
+    else:
+        raise TypeError(f"Unsupported type definition: {type_def}")
+
 
 class State(Enum):
     FIRST_INIT = 1
@@ -33,10 +56,10 @@ class Agent:
         self.state = State.FIRST_INIT
         self.restart_key = restart_key
 
-        self.process_input = lambda x:x if process_input is None else process_input
-        self.process_output = lambda x:x if process_output is None else process_output
-        self.cal_reward = lambda x:0 if reward_func is None else reward_func
-        self.cal_end = lambda x:False if end_func is None else end_func
+        self.process_input = lambda x:x if process_input is None else process_input(x)
+        self.process_output = lambda x:x if process_output is None else process_output(x)
+        self.cal_reward = lambda x:0 if reward_func is None else reward_func(x)
+        self.cal_end = lambda x:False if end_func is None else end_func(x)
 
         self.init_val = None
 
@@ -63,6 +86,7 @@ class Agent:
         if end:
             self.state = State.END
         return s, self.cal_reward(s), end, ''
+        # return 1 , "", 0 , 1
 
     def _restart(self):
         self.link.send(f'<c><{self.restart_key}><uint32_t>1</uint32_t></{self.restart_key}></c>\n'.encode())
