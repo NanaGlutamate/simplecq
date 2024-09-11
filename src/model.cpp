@@ -148,6 +148,7 @@ class MyAssembledModel : public CSModelObject {
                     WriteLog(std::format("SubModel[{}]Log: {}", modelName, msg), level);
                 }
             });
+            modelInfo.obj->SetCommonCallBack(com_cb_);
             modelInfo.obj->SetID(GetID());
             modelInfo.obj->SetForceSideID(GetForceSideID());
 
