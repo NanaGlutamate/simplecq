@@ -70,8 +70,8 @@ struct ModelManager {
     }
     void destoryKilledModel() {
         auto it = std::remove_if(dynamicModels.begin(), dynamicModels.end(), [](const auto& m){
-            return m.handle.obj->GetState == CSInstanceState::IS_DESTROYED
-                || m.handle.obj->GetState == CSInstanceState::IS_ERROR;
+            return m.handle.obj->GetState() == CSInstanceState::IS_DESTROYED
+                || m.handle.obj->GetState() == CSInstanceState::IS_ERROR;
         });
         dynamicModels.erase(it, dynamicModels.end());
     }
