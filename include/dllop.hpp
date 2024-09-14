@@ -41,6 +41,7 @@ struct ModelObjHandle {
         dll = o.dll;
         outputDataMovable = o.outputDataMovable;
         o.obj = nullptr;
+        return *this;
     }
     ~ModelObjHandle() {
         if (obj) {
