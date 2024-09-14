@@ -15,6 +15,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <algorithm>
 
 #include "callback.hpp"
 #include "dllop.hpp"
@@ -66,6 +67,13 @@ struct ModelManager {
     }
     std::expected<void, std::string> loadDll(const std::string &name, const std::string &path, bool move) {
         return loader.loadDll(name, path, move);
+    }
+    void destoryKilledModel() {
+        auto it = std::remove_if(dynamicModels.begin(), dynamicModels.end(), [](const auto& m){
+            return m.handle.obj->GetState == CSInstanceState::IS_DESTROYED
+                || m.handle.obj->GetState == CSInstanceState::IS_ERROR;
+        dynamicModels.erase(it, dynamicModels.end());
+        });
     }
     void createDynamicModel() {
         for (auto &&[ID, sideID, param, type] : callback.createModelCommands) {
