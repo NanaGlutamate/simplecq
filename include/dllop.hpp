@@ -35,7 +35,7 @@ struct ModelObjHandle {
     }
     ModelObjHandle& operator=(ModelObjHandle&& o) noexcept {
         if (obj) {
-            dll.destoryFunc(obj);
+            dll.destoryFunc(obj, false);
         }
         obj = o.obj;
         dll = o.dll;
