@@ -27,8 +27,18 @@ struct ModelObjHandle {
         o.obj = dll.createFunc();
         o.outputDataMovable = outputDataMovable;
     }
-    ModelObjHandle(ModelObjHandle &&o) noexcept : dll(o.dll) {
+    ModelObjHandle(ModelObjHandle &&o) noexcept {
         obj = o.obj;
+        dll = o.dll;
+        outputDataMovable = o.outputDataMovable;
+        o.obj = nullptr;
+    }
+    ModelObjHandle& operator=(ModelObjHandle&& o) noexcept {
+        if (obj) {
+            dll.destoryFunc(obj);
+        }
+        obj = o.obj;
+        dll = o.dll;
         outputDataMovable = o.outputDataMovable;
         o.obj = nullptr;
     }
