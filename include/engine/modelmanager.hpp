@@ -72,8 +72,8 @@ struct ModelManager {
         auto it = std::remove_if(dynamicModels.begin(), dynamicModels.end(), [](const auto& m){
             return m.handle.obj->GetState == CSInstanceState::IS_DESTROYED
                 || m.handle.obj->GetState == CSInstanceState::IS_ERROR;
-        dynamicModels.erase(it, dynamicModels.end());
         });
+        dynamicModels.erase(it, dynamicModels.end());
     }
     void createDynamicModel() {
         for (auto &&[ID, sideID, param, type] : callback.createModelCommands) {
