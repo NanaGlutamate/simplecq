@@ -310,6 +310,8 @@ struct ExecutionEngine {
 
         // dynamic tasks
         auto dyn_output_task = frame.emplace([this](tf::Subflow &sbf) {
+            // remove useless model
+            mm.destoryKilledModel();
             // create model
             mm.createDynamicModel();
             // output
