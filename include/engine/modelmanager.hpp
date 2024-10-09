@@ -69,9 +69,21 @@ struct ModelManager {
         return loader.loadDll(name, path, move);
     }
     void destoryKilledModel() {
+        // update expire time
+        for (auto&& m : dynamicModels) {
+            auto& state = m.handle.obj->GetState();
+            if (state == CSInstanceState::IS_DESTROYED || state == CSInstanceState::IS_ERROR) {
+                dynamicModelsExpiredTime.emplace(m.handle.obj, 10);
+                dynamicModelsExpiredTime[m.handle.obj]--;
+            }
+        }
+        // real remove when expired
         auto it = std::remove_if(dynamicModels.begin(), dynamicModels.end(), [](const auto& m){
-            return m.handle.obj->GetState() == CSInstanceState::IS_DESTROYED
-                || m.handle.obj->GetState() == CSInstanceState::IS_ERROR;
+            if (auto it = dynamicModelsExpiredTime.find(m.handle.obj); it != dynamicModelsExpiredTime.end() && it->second == 0) {
+                dynamicModelsExpiredTime.erase(it);
+                return true;
+            }
+            return false;
         });
         dynamicModels.erase(it, dynamicModels.end());
     }
@@ -88,6 +100,9 @@ struct ModelManager {
     std::vector<ModelEntity> models;
     // dynamic created models
     std::vector<ModelEntity> dynamicModels;
+
+    std::map<CSModelObject*, int> dynamicModelsExpiredTime;
+
     std::set<std::string> modelTypes;
 
     struct ModelLoader {
