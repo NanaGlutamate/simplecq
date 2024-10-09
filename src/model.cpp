@@ -11,6 +11,7 @@
 #include <span>
 #include <string>
 #include <unordered_map>
+#include <mutex>
 
 #include <assert.h>
 
@@ -265,8 +266,14 @@ class MyAssembledModel : public CSModelObject {
 
         subModels.clear();
 
-        Init(initValue);
+        {
+            // never init concurrently
+            std::lock_guard<std::mutex> lck{restartLock};
+            Init(initValue);
+        }
     }
+
+    inline static std::mutex restartLock{};
 
     Profiler profiler;
     uint32_t logLevel;
