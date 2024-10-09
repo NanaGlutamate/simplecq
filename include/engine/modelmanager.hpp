@@ -71,7 +71,7 @@ struct ModelManager {
     void destoryKilledModel() {
         // update expire time
         for (auto&& m : dynamicModels) {
-            auto& state = m.handle.obj->GetState();
+            auto state = m.handle.obj->GetState();
             if (state == CSInstanceState::IS_DESTROYED || state == CSInstanceState::IS_ERROR) {
                 dynamicModelsExpiredTime.emplace(m.handle.obj, 10);
                 dynamicModelsExpiredTime[m.handle.obj]--;
