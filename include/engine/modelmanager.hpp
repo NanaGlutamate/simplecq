@@ -73,12 +73,12 @@ struct ModelManager {
         for (auto&& m : dynamicModels) {
             auto state = m.handle.obj->GetState();
             if (state == CSInstanceState::IS_DESTROYED || state == CSInstanceState::IS_ERROR) {
-                dynamicModelsExpiredTime.emplace(m.handle.obj, 10);
-                dynamicModelsExpiredTime[m.handle.obj]--;
+                auto [it, _] = dynamicModelsExpiredTime.emplace(m.handle.obj, 10);
+                it->second--;
             }
         }
         // real remove when expired
-        auto it = std::remove_if(dynamicModels.begin(), dynamicModels.end(), [](const auto& m){
+        auto it = std::remove_if(dynamicModels.begin(), dynamicModels.end(), [this](const auto& m){
             if (auto it = dynamicModelsExpiredTime.find(m.handle.obj); it != dynamicModelsExpiredTime.end() && it->second == 0) {
                 dynamicModelsExpiredTime.erase(it);
                 return true;
