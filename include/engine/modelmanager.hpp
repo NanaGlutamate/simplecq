@@ -79,19 +79,18 @@ struct ModelManager {
         }
         // real remove when expired
         auto it = std::remove_if(dynamicModels.begin(), dynamicModels.end(), [this](const auto& m){
-            if (auto it = dynamicModelsExpiredTime.find(m.handle.obj); it != dynamicModelsExpiredTime.end() && it->second == 0) {
-                dynamicModelsExpiredTime.erase(it);
-                return true;
-            }
-            return false;
+            auto it = dynamicModelsExpiredTime.find(m.handle.obj);
+            return it != dynamicModelsExpiredTime.end() &&
+                it->second == 0 &&
+                (dynamicModelsExpiredTime.erase(it), true);
         });
         dynamicModels.erase(it, dynamicModels.end());
     }
     void createDynamicModel() {
         for (auto &&[ID, sideID, param, type] : callback.createModelCommands) {
-            if (auto res = createModel(ID, sideID, type, param, true); !res) {
-                callback.writeLog("Engine", std::format("Exception When Create Dynamic Model: {}", res.error()), 5);
-            }
+            createModel(ID, sideID, type, param, true).transform_error([this](auto&& err){
+                callback.writeLog("Engine", std::format("Exception When Create Dynamic Model: {}", err), 5);
+            })
         }
         callback.createModelCommands.clear();
     }
