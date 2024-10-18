@@ -35,35 +35,6 @@ class MyAssembledModel : public CSModelObject {
     // output: subs->subs, subs->root
     MyAssembledModel() = default;
     virtual bool Init(const std::unordered_map<std::string, std::any> &value) override {
-        // auto location = getLibDir();
-        // std::ifstream configFile(location + "assemble.yml");
-        // fkyaml::node config = fkyaml::node::deserialize(configFile);
-        // for (auto &&model : config["models"]) {
-        //     auto &name = model["model_name"].get_value_ref<std::string &>();
-        //     subModels.emplace(name, location + model["dll_name"].get_value_ref<std::string &>());
-        //     if (model.contains("output_movable")) {
-        //         subModels.find(name)->second.outputDataMovable = model["output_movable"].get_value<bool>();
-        //     }
-        // }
-        // auto load = [&config](TransformInfo &tar, std::string_view name, auto check) {
-        //     for (auto &&rule : config[name]) {
-        //         bool containsName = rule.contains("name");
-        //         bool containsFrom = rule.contains("from");
-        //         bool containsTo = rule.contains("to");
-        //         const auto &srcName = containsName ? rule["name"].get_value_ref<std::string &>()
-        //                                            : rule["src_name"].get_value_ref<std::string &>();
-        //         const auto &dstName = containsName ? rule["name"].get_value_ref<std::string &>()
-        //                                            : rule["dst_name"].get_value_ref<std::string &>();
-        //         static std::string rootName = "root";
-        //         const auto &from = rule.contains("from") ? rule["from"].get_value_ref<std::string &>() : rootName;
-        //         const auto &to = rule.contains("to") ? rule["to"].get_value_ref<std::string &>() : rootName;
-        //         check(from, to);
-        //         tar.rules[from][srcName].push_back(TransformInfo::Action{
-        //             .to = to,
-        //             .dstName = dstName,
-        //         });
-        //     }
-        // };
         auto p = profiler.startRecord("root: init");
 
         if (!log_) {
@@ -71,10 +42,8 @@ class MyAssembledModel : public CSModelObject {
         }
 
         auto location = getLibDir();
-        // std::ifstream configFile(location + "assemble.yml");
         auto configFile = location + "assemble.yml";
         auto config = YAML::LoadFile(configFile);
-        // fkyaml::node config = fkyaml::node::deserialize(configFile);
         for (auto &&model : config["models"]) {
             auto name = model["model_name"].as<std::string>();
             auto dllName = model["dll_name"].as<std::string>();
