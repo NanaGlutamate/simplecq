@@ -125,11 +125,11 @@ struct std::formatter<tools::myany::parseError, char> {
     template <class ParseContext> constexpr ParseContext::iterator parse(ParseContext &ctx) { return ctx.begin(); }
 
     template <class FmtContext> FmtContext::iterator format(tools::myany::parseError err, FmtContext &ctx) const {
-        std::ostringstream out;
+        std::string_view out;
         if (err == tools::myany::parseError::different_type_in_same_list)
-            out << "[different_type_in_same_list]";
+            out = "[different_type_in_same_list]";
         else
-            out << "[unknown_type]";
-        return std::ranges::copy(std::move(out).str(), ctx.out()).out;
+            out = "[unknown_type]";
+        return std::ranges::copy(out, ctx.out()).out;
     }
 };

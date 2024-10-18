@@ -5,7 +5,6 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(AFTER ${PROJECT_SOURCE_DIR}/src)
-include_directories(AFTER ${PROJECT_SOURCE_DIR}/include)
 include_directories(AFTER ${PROJECT_SOURCE_DIR}/3rd-party)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
