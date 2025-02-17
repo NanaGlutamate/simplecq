@@ -91,7 +91,7 @@ struct ModelManager {
             createModel(ID, sideID, type, param, true).transform_error([this](auto&& err) -> int {
                 callback.writeLog("Engine", std::format("Exception When Create Dynamic Model: {}", err), 5);
                 return 0;
-            })
+            });
         }
         callback.createModelCommands.clear();
     }
