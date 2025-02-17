@@ -19,6 +19,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
+#include <chrono>
 
 #include "datatransform.hpp"
 #include "dowithcatch.hpp"
@@ -92,46 +93,11 @@ struct TopicManager {
         CacheLinePadding<ClassifiedModelOutput> buffer0, buffer1;
         CacheLinePadding<ClassifiedModelOutput> *topic_buffer = &buffer0;
         CacheLinePadding<ClassifiedModelOutput> *preparing_topic_buffer = &buffer1;
-        // void clearTopicBuffer() {
-        //     for (auto &&[k, v] : topic_buffer) {
-        //         v.clear();
-        //     }
-        // }
         void swapBuffer() { std::swap(topic_buffer, preparing_topic_buffer); }
     } buffer;
 
     std::unordered_map<std::string, std::vector<size_t>> dependenciesOfTarget;
-    // void topicCollect(tf::Subflow &sbf) {
-    //     std::unordered_map<std::string_view, tf::Task> dependencies;
-    //     for (auto &&[target, topics] : *buffer.topic_buffer) {
-    //         dependencies[target] = sbf.emplace([&] { topics.clear(); });
-    //     }
-    //     auto doTransform = [&, this](std::vector<CacheLinePadding<ClassifiedModelOutput>> &tar) {
-    //         for (auto &&output : tar) {
-    //             for (auto &&[k, v] : output) {
-    //                 if (!buffer.topic_buffer->contains(k)) {
-    //                     (*buffer.topic_buffer)[k];
-    //                 }
-    //                 auto it = dependencies.find(k);
-    //                 auto functor = [&, &buffer{buffer}] {
-    //                     auto &target_buffer = buffer.topic_buffer->find(k)->second;
-    //                     target_buffer.insert_range(target_buffer.end(), std::move(v));
-    //                     v.clear();
-    //                 };
-    //                 tf::Task t = sbf.emplace(std::move(functor));
-    //                 if (it != dependencies.end()) {
-    //                     t.succeed(it->second);
-    //                     it->second = t;
-    //                 } else {
-    //                     dependencies.emplace(k, t);
-    //                 }
-    //             }
-    //         }
-    //     };
-    //     doTransform(buffer.output_buffer);
-    //     doTransform(buffer.dyn_output_buffer);
-    //     sbf.join();
-    // }
+
     void dynamicTopicCollect(tf::Subflow &sbf) {
         std::unordered_map<std::string_view, tf::Task> dependencies;
         for (auto &&[target, topics] : *buffer.preparing_topic_buffer) {
@@ -158,6 +124,7 @@ struct TopicManager {
             }
         }
     }
+
     void staticTopicCollect(const std::string &target) {
         auto &target_buffer = buffer.preparing_topic_buffer->find(target)->second;
         auto it = dependenciesOfTarget.find(target);
