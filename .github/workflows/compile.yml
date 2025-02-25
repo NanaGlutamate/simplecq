@@ -21,6 +21,7 @@ jobs:
       - uses: lukka/run-vcpkg@v11
         with:
           vcpkgGitCommitId: d8f4a4703a8b5e80f56f4978c72b3d2f21d312ff
+          runVcpkgInstall: true
       # - uses: lukka/run-cmake@v10
       #   with:
       #     # This is the name of the CMakePresets.json's configuration to use to generate
