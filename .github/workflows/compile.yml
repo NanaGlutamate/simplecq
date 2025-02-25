@@ -36,6 +36,9 @@ jobs:
             !${{ env._VCPKG_ }}/packages
             !${{ env._VCPKG_ }}/downloads
             !${{ env._VCPKG_ }}/installed
+            |${{ github.workspace }}/builds
+            |${{ github.workspace }}/build
+            |${{ github.workspace }}/out
           # The key is composed in a way that it gets properly invalidated whenever a different version of vcpkg is being used.
           key: installed
       - uses: lukka/run-vcpkg@v11
@@ -66,6 +69,11 @@ jobs:
           # # to test.
           # # This is useful to reduce the number of CMake's Presets you need in CMakePresets.json.
           # testPresetAdditionalArgs: "['--config Release']"
+      - name: upload
+        uses: actions/upload-artifact@v4
+        with: 
+          path: |
+            ${{ github.workspace }}/bin
       # - name: build
       #   run: |
       #     cmake .
