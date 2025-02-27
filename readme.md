@@ -15,6 +15,8 @@ replacement for CQ-Sim
 
 # 使用方法
 
+you can download pre-build version in [workflow](https://github.com/NanaGlutamate/simplecq/actions)
+
 ## assembled model (mymodel.dll)
 
 组合模型，与CQ中组合模型基本一致，加载组合模型描述文件（如```config/assamble.yml```）
