@@ -13,6 +13,10 @@ replacement for CQ-Sim
 * agent model - 代理模型，毕设使用
 * sim controller - 主程序，加载yml格式的想定文件
 
+# 用户评价
+
+![4a6623d622a1af4319e06e0f25f52831](https://github.com/user-attachments/assets/48a833e1-d73a-4512-b755-04a908179475)
+
 # 使用方法
 
 you can download pre-build version in [workflow](https://github.com/NanaGlutamate/simplecq/actions)
