@@ -36,6 +36,118 @@ you can download pre-build version in [workflow](https://github.com/NanaGlutamat
 
 ### 组合模型描述文件
 
+组合模型描述文件（例如 `config/assemble.yml`）用于定义如何将多个原子模型（DLLs）组合成一个逻辑上的复合模型，以及它们之间的数据交互规则。该文件基于YAML格式。
+
+**文件结构：**
+
+1.  **`config`**: 复合模型的全局配置。
+    *   `profile`: (可选) 性能分析结果的输出文件路径。
+    *   `restart_key`: (可选) 用于触发模型重启的输入数据键名。当 `SetInput` 接收到包含此键的数据时，模型将重置。
+    *   `side_filter`: (可选) 用于过滤输入数据的阵营ID。
+    *   `log_level`: (可选) 日志级别。
+
+2.  **`models`**: 定义构成复合模型的子模型列表。每个子模型包含以下字段：
+    *   `dll_name`: 子模型DLL文件的路径。
+    *   `model_name`: 子模型在复合模型中的唯一名称，用于数据转换规则中引用。
+    *   `output_movable`: 布尔值，指示子模型的输出数据是否可以使用移动语义进行优化（`true`表示可以，`false`表示不可以）。设置为 `true` 可以提高性能，但需要确保数据所有权转换的安全性。
+
+3.  **`init_convert`**: 定义根模型初始化数据到子模型的转换规则。
+    *   `from`: (可选，默认为`root`) 数据来源，通常是`root`。
+    *   `to`: 数据目标，指向一个子模型的 `model_name`。
+    *   `values`: 转换规则列表。每个规则可以指定：
+        *   `name`: 原始数据的键名，同时作为目标数据的键名。
+        *   `src_name`: 原始数据的键名。
+        *   `dst_name`: 目标数据的键名。
+
+4.  **`input_convert`**: 定义根模型输入数据到子模型的转换规则。
+    *   `from`: (可选，默认为`root`) 数据来源，通常是`root`。
+    *   `to`: 数据目标，指向一个子模型的 `model_name`。
+    *   `values`: 转换规则列表，同 `init_convert`。
+
+5.  **`output_convert`**: 定义子模型输出数据到根模型或子模型之间的数据转换规则。
+    *   `from`: 数据来源，指向一个子模型的 `model_name`。
+    *   `to`: (可选，默认为`root`) 数据目标，可以是`root`或另一个子模型的 `model_name`。
+    *   `values`: 转换规则列表，同 `init_convert`。
+
+**示例 (`config/assemble.yml`)**
+
+```yaml
+config:
+    profile: "D:/Desktop/FinalProj/Code/simplecq/config/profile.txt"
+    restart_key: restart
+    side_filter: side
+    log_level: 1
+
+models:
+    - 
+        dll_name: "D:/Desktop/FinalProj/Code/simplecq/config/CarPhyModel.dll"
+        model_name: phy
+        output_movable: true
+    - 
+        dll_name: "D:/Desktop/FinalProj/Code/simplecq/config/ruleset.dll"
+        model_name: beh
+        output_movable: false
+
+init_convert:
+    - 
+        to: phy
+        values: 
+            - {name: longitude}
+            - {name: latitude}
+            - {name: altitude}
+    - 
+        to: beh
+        values:
+            - {name: filePath}
+            - {name: enableLog}
+            - {name: ForceSideID}
+
+input_convert: 
+    - 
+        to: phy
+        values:
+            - {name: FireID}
+            - {name: FireData}
+            - {name: EntityInfo}
+    - 
+        to: beh
+        values:
+            - {name: targetDir}
+            - {name: targetVel}
+            - {name: enableFire}
+            - {name: formationID}
+            - {name: fireTarget}
+
+output_convert:
+    - 
+        from: phy
+        values:
+            - {name: State}
+            - {name: VID}
+            - {name: FireDataOut}
+            - {name: EntityInfoOut}
+            - {name: roll}
+            - {name: yaw}
+            - {name: pitch}
+            - {name: longitude}
+            - {name: latitude}
+            - {name: altitude}
+    - 
+        from: phy
+        to: beh
+        values:
+            - {name: yaw}
+            - {src_name: EntityInfoOut, dst_name: selfInfo}
+            - {src_name: scannedInfoOut, dst_name: scannedInfo}
+            - {src_name: weaponInfoOut, dst_name: weaponInfo}
+    - 
+        from: beh
+        to: phy
+        values:
+            - {name: Param1}
+            - {name: Param2}
+            - {src_name: ActionId, dst_name: Command}
+```
 
 
 ## agent model (agent.dll)
