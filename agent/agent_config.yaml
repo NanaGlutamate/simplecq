@@ -1,0 +1,20 @@
+llm:
+  # provider: openai | deepseek
+  provider: deepseek
+  # 在这里填写你的 Key，或改用环境变量 SIMPLECQ_LLM_API_KEY
+  api_key: ""
+  # - openai: https://api.openai.com
+  # - deepseek: https://api.deepseek.com
+  base_url: ""
+  model: deepseek-chat
+  temperature: 0.2
+  timeout_seconds: 60
+
+project:
+  root: ""
+  docs:
+    - readme.md
+    - doc/SimpleCQ代码文件说明 .md
+    - config/file_simplecq/assemble.yml
+    - config/file_simplecq/scene_planebattle.yml
+
