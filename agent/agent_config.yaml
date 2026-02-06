@@ -15,6 +15,6 @@ project:
   docs:
     - readme.md
     - doc/SimpleCQ代码文件说明 .md
-    - config/file_simplecq/assemble.yml
-    - config/file_simplecq/scene_planebattle.yml
+    - config/assemble.yml
+    - config/scene_carbattle.yml
 
