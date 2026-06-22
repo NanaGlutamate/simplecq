@@ -1,0 +1,251 @@
+model_types:
+    -
+        model_type_name: RedPlane1
+        dll_path: "D:/postgraduate/FinalProject/simplecq-master/bin/RelWithDebInfo/mymodel.dll"
+        output_movable: false
+    -
+        model_type_name: RedPlane2
+        dll_path: "D:/postgraduate/FinalProject/simplecq-master/bin/RelWithDebInfo/mymodel.dll"
+        output_movable: false
+    -
+        model_type_name: RedPlane3
+        dll_path: "D:/postgraduate/FinalProject/simplecq-master/bin/RelWithDebInfo/mymodel.dll"
+        output_movable: false
+    -
+        model_type_name: agent
+        dll_path: "D:/postgraduate/FinalProject/simplecq-master/bin/RelWithDebInfo/agent.dll"
+        output_movable: false
+    -
+        model_type_name: threaten_area
+        dll_path: "D:/postgraduate/FinalProject/simplecq-master/bin/RelWithDebInfo/fobidden_area.dll"
+        output_movable: false
+
+
+models:
+    -
+        model_type: RedPlane1
+        side_id: 1
+        id: 1
+        init_value: "<c>
+                        <Altitude><double>2500.0</double></Altitude>
+                        <Latitude><double>0.0</double></Latitude>
+                        <Longitude><double>92.0</double></Longitude>
+                        <Pitch><double>0.0</double></Pitch>
+                        <Yaw><double>90.0</double></Yaw>
+                        <Roll><double>0.0</double></Roll>
+                        <Speed><double>300.0</double></Speed>
+                    </c>"
+    -
+        model_type: RedPlane2
+        side_id: 1
+        id: 2
+        init_value: "<c>
+                        <Altitude><double>2500.0</double></Altitude>
+                        <Latitude><double>0.5</double></Latitude>
+                        <Longitude><double>92.0</double></Longitude>
+                        <Pitch><double>0.0</double></Pitch>
+                        <Yaw><double>90.0</double></Yaw>
+                        <Roll><double>0.0</double></Roll>
+                        <Speed><double>300.0</double></Speed>
+                    </c>"
+    -
+        model_type: RedPlane3
+        side_id: 1
+        id: 3
+        init_value: "<c>
+                        <Altitude><double>2500.0</double></Altitude>
+                        <Latitude><double>1.0</double></Latitude>
+                        <Longitude><double>92.0</double></Longitude>
+                        <Pitch><double>0.0</double></Pitch>
+                        <Yaw><double>90.0</double></Yaw>
+                        <Roll><double>0.0</double></Roll>
+                        <Speed><double>300.0</double></Speed>
+                    </c>"
+    -
+        model_type: threaten_area
+        side_id: 2
+        id: 4
+        init_value: "<c><longitude><double>93.0</double></longitude>
+                        <latitude><double>0.0</double></latitude>
+                        <altitude><double>0.0</double></altitude>                        
+                        <threaten_range><double>1000.0</double></threaten_range></c>"
+    -
+        model_type: threaten_area
+        side_id: 2
+        id: 5
+        init_value: "<c><longitude><double>93.0</double></longitude>
+                        <latitude><double>0.5</double></latitude>
+                        <altitude><double>0.0</double></altitude>                        
+                        <threaten_range><double>1000.0</double></threaten_range></c>"
+    -
+        model_type: threaten_area
+        side_id: 2
+        id: 6
+        init_value: "<c><longitude><double>93.0</double></longitude>
+                        <latitude><double>1.0</double></latitude>
+                        <altitude><double>0.0</double></altitude>                        
+                        <threaten_range><double>1000.0</double></threaten_range></c>"
+    -
+        model_type: agent
+        side_id: 1
+        id: 7
+        init_value: "<c><port><uint32_t>40029</uint32_t></port></c>"
+   
+topics:
+    - 
+        from: RedPlane1
+        members:
+            - Longitude
+            - Latitude
+            - Altitude
+        subscribers:
+            - 
+                to: agent
+                name_convert:
+                    - {name: Longitude}
+                    - {name: Latitude}
+                    - {name: Altitude}
+    - 
+        from: RedPlane2
+        members:
+            - Longitude
+            - Latitude
+            - Altitude
+        subscribers:
+            - 
+                to: agent
+                name_convert:
+                    - {name: Longitude}
+                    - {name: Latitude}
+                    - {name: Altitude}
+    - 
+        from: RedPlane3
+        members:
+            - Longitude
+            - Latitude
+            - Altitude
+        subscribers:
+            - 
+                to: agent
+                name_convert:
+                    - {name: Longitude}
+                    - {name: Latitude}
+                    - {name: Altitude}
+    - 
+        from: agent
+        members:
+            - Beh_outinfo1
+            - Beh_outinfo2
+            - Beh_outinfo3
+        subscribers:
+            -
+                to: RedPlane1
+                name_convert:
+                    -
+                        src_name: Beh_outinfo1
+                        dst_name: Beh_outinfo
+            -
+                to: RedPlane2
+                name_convert:
+                     -
+                        src_name: Beh_outinfo2
+                        dst_name: Beh_outinfo
+            -
+                to: RedPlane3
+                name_convert:
+                     -
+                        src_name: Beh_outinfo3
+                        dst_name: Beh_outinfo
+    - 
+        from: agent
+        members:
+            - restart
+        subscribers:
+            -
+                to: RedPlane1
+                name_convert:
+                    - {name: restart}
+            -
+                to: RedPlane2
+                name_convert:
+                    - {name: restart}
+            -
+                to: RedPlane3
+                name_convert:
+                    - {name: restart}
+            -
+                to: threaten_area
+                name_convert:
+                    - {name: restart}
+    - 
+        from: RedPlane1
+        members:
+            - ForceSideID
+            - State
+            - Longitude
+            - Latitude
+        subscribers:
+            - 
+                to: root
+                name_convert:
+                    - {name: ForceSideID}
+                    - {name: State}
+                    -
+                        src_name: Longitude
+                        dst_name: longitude
+                    -
+                        src_name: Latitude
+                        dst_name: latitude  
+    - 
+        from: RedPlane2
+        members:
+            - ForceSideID
+            - State
+            - Longitude
+            - Latitude
+        subscribers:
+            - 
+                to: root
+                name_convert:
+                    - {name: ForceSideID}
+                    - {name: State}
+                    -
+                        src_name: Longitude
+                        dst_name: longitude
+                    -
+                        src_name: Latitude
+                        dst_name: latitude  
+    - 
+        from: RedPlane3
+        members:
+            - ForceSideID
+            - State
+            - Longitude
+            - Latitude
+        subscribers:
+            - 
+                to: root
+                name_convert:
+                    - {name: ForceSideID}
+                    - {name: State}
+                    -
+                        src_name: Longitude
+                        dst_name: longitude
+                    -
+                        src_name: Latitude
+                        dst_name: latitude                
+    - 
+        from: threaten_area
+        members:
+            - ForceSideID
+            - State
+            - latitude
+            - longitude
+        subscribers:
+            - 
+                to: root
+                name_convert:
+                    - {name: ForceSideID}
+                    - {name: State}
+                    - {name: longitude}
+                    - {name: latitude}
