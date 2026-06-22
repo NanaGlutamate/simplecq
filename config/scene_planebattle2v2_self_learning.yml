@@ -1,0 +1,586 @@
+model_types:
+    -
+        model_type_name: RedPlane1
+        dll_path: "D:/postgraduate/FinalProject/simplecq-master/bin/RelWithDebInfo/mymodel.dll"
+        output_movable: false
+    -
+        model_type_name: BluePlane1
+        dll_path: "D:/postgraduate/FinalProject/simplecq-master/bin/RelWithDebInfo/mymodel.dll"
+        output_movable: false
+    -
+        model_type_name: RedMissile1
+        dll_path: "D:/postgraduate/FinalProject/simplecq-master/bin/RelWithDebInfo/aamissile_model.dll"
+        output_movable: false
+    -
+        model_type_name: BlueMissile1
+        dll_path: "D:/postgraduate/FinalProject/simplecq-master/bin/RelWithDebInfo/aamissile_model.dll"
+        output_movable: false
+    -
+        model_type_name: RedPlane2
+        dll_path: "D:/postgraduate/FinalProject/simplecq-master/bin/RelWithDebInfo/mymodel.dll"
+        output_movable: false
+    -
+        model_type_name: BluePlane2
+        dll_path: "D:/postgraduate/FinalProject/simplecq-master/bin/RelWithDebInfo/mymodel.dll"
+        output_movable: false
+    -
+        model_type_name: RedMissile2
+        dll_path: "D:/postgraduate/FinalProject/simplecq-master/bin/RelWithDebInfo/aamissile_model.dll"
+        output_movable: false
+    -
+        model_type_name: BlueMissile2
+        dll_path: "D:/postgraduate/FinalProject/simplecq-master/bin/RelWithDebInfo/aamissile_model.dll"
+        output_movable: false
+    -
+        model_type_name: agent
+        dll_path: "D:/postgraduate/FinalProject/simplecq-master/bin/RelWithDebInfo/agent.dll"
+        output_movable: false
+
+models:
+    -
+        model_type: RedPlane1
+        side_id: 1
+        id: 1
+        init_value: "<c>
+                        <isleader><bool>0</bool></isleader>
+                        <Altitude><double>2500.0</double></Altitude>
+                        <Latitude><double>35.0</double></Latitude>
+                        <Longitude><double>115.0</double></Longitude>
+                        <Speed><double>250.0</double></Speed>
+                        <Pitch><double>0.0</double></Pitch>
+                        <Yaw><double>0.0</double></Yaw>
+                        <Roll><double>0.0</double></Roll>
+                        <MissileNum><uint64_t>5</uint64_t></MissileNum>
+                        <weaponModelID><string>RedMissile1</string></weaponModelID>
+                        <Fuel><double>5000.0</double></Fuel>
+                    </c>"
+    -
+        model_type: RedPlane2
+        side_id: 1
+        id: 3
+        init_value: "<c>
+                        <isleader><bool>0</bool></isleader>
+                        <Altitude><double>2500.0</double></Altitude>
+                        <Latitude><double>35.0</double></Latitude>
+                        <Longitude><double>116.5</double></Longitude>
+                        <Speed><double>250.0</double></Speed>
+                        <Pitch><double>0.0</double></Pitch>
+                        <Yaw><double>0.0</double></Yaw>
+                        <Roll><double>0.0</double></Roll>
+                        <MissileNum><uint64_t>5</uint64_t></MissileNum>
+                        <weaponModelID><string>RedMissile2</string></weaponModelID>
+                        <Fuel><double>5000.0</double></Fuel>
+                    </c>"
+    -
+        model_type: agent
+        side_id: 1
+        id: 5
+        init_value: "<c><port><uint32_t>40029</uint32_t></port></c>"
+    -
+        model_type: BluePlane1
+        side_id: 2
+        id: 2
+        init_value: "<c>
+                        <isleader><bool>0</bool></isleader>
+                        <Altitude><double>2500.0</double></Altitude>
+                        <Latitude><double>36.3</double></Latitude>
+                        <Longitude><double>115.0</double></Longitude>
+                        <Speed><double>250.0</double></Speed>
+                        <Pitch><double>0.0</double></Pitch>
+                        <Yaw><double>180.0</double></Yaw>
+                        <Roll><double>0.0</double></Roll>
+                        <MissileNum><uint64_t>5</uint64_t></MissileNum>
+                        <weaponModelID><string>BlueMissile1</string></weaponModelID>
+                        <Fuel><double>5000.0</double></Fuel>
+                    </c>"
+    -
+        model_type: BluePlane2
+        side_id: 2
+        id: 4
+        init_value: "<c>
+                        <isleader><bool>0</bool></isleader>
+                        <Altitude><double>2500.0</double></Altitude>
+                        <Latitude><double>36.3</double></Latitude>
+                        <Longitude><double>116.5</double></Longitude>
+                        <Speed><double>250.0</double></Speed>
+                        <Pitch><double>0.0</double></Pitch>
+                        <Yaw><double>180.0</double></Yaw>
+                        <Roll><double>0.0</double></Roll>
+                        <MissileNum><uint64_t>5</uint64_t></MissileNum>
+                        <weaponModelID><string>BlueMissile2</string></weaponModelID>
+                        <Fuel><double>5000.0</double></Fuel>
+                    </c>"
+topics:
+    # to root
+    - 
+        from: RedPlane1
+        members:
+            - ForceSideID
+            - State
+            - Longitude
+            - Latitude
+        subscribers:
+            - 
+                to: root
+                name_convert:
+                    - {name: ForceSideID}
+                    - {name: State}
+                    -
+                        src_name: Longitude
+                        dst_name: longitude
+                    -
+                        src_name: Latitude
+                        dst_name: latitude
+    - 
+        from: RedPlane2
+        members:
+            - ForceSideID
+            - State
+            - Longitude
+            - Latitude
+        subscribers:
+            - 
+                to: root
+                name_convert:
+                    - {name: ForceSideID}
+                    - {name: State}
+                    -
+                        src_name: Longitude
+                        dst_name: longitude
+                    -
+                        src_name: Latitude
+                        dst_name: latitude
+    - 
+        from: BluePlane1
+        members:
+            - ForceSideID
+            - State
+            - Longitude
+            - Latitude
+        subscribers:
+            - 
+                to: root
+                name_convert:
+                    - {name: ForceSideID}
+                    - {name: State}
+                    -
+                        src_name: Longitude
+                        dst_name: longitude
+                    -
+                        src_name: Latitude
+                        dst_name: latitude
+    - 
+        from: BluePlane2
+        members:
+            - ForceSideID
+            - State
+            - Longitude
+            - Latitude
+        subscribers:
+            - 
+                to: root
+                name_convert:
+                    - {name: ForceSideID}
+                    - {name: State}
+                    -
+                        src_name: Longitude
+                        dst_name: longitude
+                    -
+                        src_name: Latitude
+                        dst_name: latitude
+    # plane to missile
+    - 
+        from: RedPlane1
+        members:
+            - GuideMsg
+            - PlaneInfo
+        subscribers:
+            - 
+                to: RedMissile1
+                name_convert:
+                    -
+                        src_name: GuideMsg
+                        dst_name: input_guide_msg
+            - 
+                to: BlueMissile1
+                name_convert:
+                    -
+                        src_name: PlaneInfo
+                        dst_name: input_target_output_info
+            - 
+                to: BlueMissile2
+                name_convert:
+                    -
+                        src_name: PlaneInfo
+                        dst_name: input_target_output_info
+    - 
+        from: RedPlane2
+        members:
+            - GuideMsg
+            - PlaneInfo
+        subscribers:
+            - 
+                to: RedMissile2
+                name_convert:
+                    -
+                        src_name: GuideMsg
+                        dst_name: input_guide_msg
+            - 
+                to: BlueMissile1
+                name_convert:
+                    -
+                        src_name: PlaneInfo
+                        dst_name: input_target_output_info
+            - 
+                to: BlueMissile2
+                name_convert:
+                    -
+                        src_name: PlaneInfo
+                        dst_name: input_target_output_info
+    - 
+        from: BluePlane1
+        members:
+            - GuideMsg
+            - PlaneInfo
+        subscribers:
+            - 
+                to: BlueMissile1
+                name_convert:
+                    -
+                        src_name: GuideMsg
+                        dst_name: input_guide_msg
+            - 
+                to: RedMissile1
+                name_convert:
+                    -
+                        src_name: PlaneInfo
+                        dst_name: input_target_output_info
+            - 
+                to: RedMissile2
+                name_convert:
+                    -
+                        src_name: PlaneInfo
+                        dst_name: input_target_output_info
+    - 
+        from: BluePlane2
+        members:
+            - GuideMsg
+            - PlaneInfo
+        subscribers:
+            - 
+                to: BlueMissile2
+                name_convert:
+                    -
+                        src_name: GuideMsg
+                        dst_name: input_guide_msg
+            - 
+                to: RedMissile1
+                name_convert:
+                    -
+                        src_name: PlaneInfo
+                        dst_name: input_target_output_info
+            - 
+                to: RedMissile2
+                name_convert:
+                    -
+                        src_name: PlaneInfo
+                        dst_name: input_target_output_info
+    # missile to plane
+    - 
+        from: RedMissile1
+        members:
+            - output_damage_msg
+            - output_entity_output_info
+            - output_lock_interact_msg
+        subscribers:
+            - 
+                to: BluePlane1
+                name_convert:
+                    -
+                        src_name: output_damage_msg
+                        dst_name: damage_msg
+                    -
+                        src_name: output_entity_output_info
+                        dst_name: Missile_outputs
+                    -
+                        src_name: output_lock_interact_msg
+                        dst_name: missile_flag
+            - 
+                to: BluePlane2
+                name_convert:
+                    -
+                        src_name: output_damage_msg
+                        dst_name: damage_msg
+                    -
+                        src_name: output_entity_output_info
+                        dst_name: Missile_outputs
+                    -
+                        src_name: output_lock_interact_msg
+                        dst_name: missile_flag
+    - 
+        from: RedMissile2
+        members:
+            - output_damage_msg
+            - output_entity_output_info
+            - output_lock_interact_msg
+        subscribers:
+            - 
+                to: BluePlane1
+                name_convert:
+                    -
+                        src_name: output_damage_msg
+                        dst_name: damage_msg
+                    -
+                        src_name: output_entity_output_info
+                        dst_name: Missile_outputs
+                    -
+                        src_name: output_lock_interact_msg
+                        dst_name: missile_flag
+            - 
+                to: BluePlane2
+                name_convert:
+                    -
+                        src_name: output_damage_msg
+                        dst_name: damage_msg
+                    -
+                        src_name: output_entity_output_info
+                        dst_name: Missile_outputs
+                    -
+                        src_name: output_lock_interact_msg
+                        dst_name: missile_flag
+    - 
+        from: BlueMissile1
+        members:
+            - output_damage_msg
+            - output_entity_output_info
+            - output_lock_interact_msg
+        subscribers:
+            - 
+                to: RedPlane1
+                name_convert:
+                    -
+                        src_name: output_damage_msg
+                        dst_name: damage_msg
+                    -
+                        src_name: output_entity_output_info
+                        dst_name: Missile_outputs
+                    -
+                        src_name: output_lock_interact_msg
+                        dst_name: missile_flag
+            - 
+                to: RedPlane2
+                name_convert:
+                    -
+                        src_name: output_damage_msg
+                        dst_name: damage_msg
+                    -
+                        src_name: output_entity_output_info
+                        dst_name: Missile_outputs
+                    -
+                        src_name: output_lock_interact_msg
+                        dst_name: missile_flag
+    - 
+        from: BlueMissile2
+        members:
+            - output_damage_msg
+            - output_entity_output_info
+            - output_lock_interact_msg
+        subscribers:
+            - 
+                to: RedPlane1
+                name_convert:
+                    -
+                        src_name: output_damage_msg
+                        dst_name: damage_msg
+                    -
+                        src_name: output_entity_output_info
+                        dst_name: Missile_outputs
+                    -
+                        src_name: output_lock_interact_msg
+                        dst_name: missile_flag
+            - 
+                to: RedPlane2
+                name_convert:
+                    -
+                        src_name: output_damage_msg
+                        dst_name: damage_msg
+                    -
+                        src_name: output_entity_output_info
+                        dst_name: Missile_outputs
+                    -
+                        src_name: output_lock_interact_msg
+                        dst_name: missile_flag
+    # RedPlane to Blue
+    - 
+        from: RedPlane1
+        members:
+            - PlaneInfo
+        subscribers:
+            - 
+                to: BluePlane1
+                name_convert:
+                    -
+                        src_name: PlaneInfo
+                        dst_name: EnemyMessage
+            - 
+                to: BluePlane2
+                name_convert:
+                    -
+                        src_name: PlaneInfo
+                        dst_name: EnemyMessage
+    - 
+        from: RedPlane2
+        members:
+            - PlaneInfo
+        subscribers:
+            - 
+                to: BluePlane1
+                name_convert:
+                    -
+                        src_name: PlaneInfo
+                        dst_name: EnemyMessage
+            - 
+                to: BluePlane2
+                name_convert:
+                    -
+                        src_name: PlaneInfo
+                        dst_name: EnemyMessage
+    # BluePlane to Red
+    - 
+        from: BluePlane1
+        members:
+            - PlaneInfo
+        subscribers:
+            - 
+                to: RedPlane1
+                name_convert:
+                    -
+                        src_name: PlaneInfo
+                        dst_name: EnemyMessage
+            - 
+                to: RedPlane2
+                name_convert:
+                    -
+                        src_name: PlaneInfo
+                        dst_name: EnemyMessage
+    - 
+        from: BluePlane2
+        members:
+            - PlaneInfo
+        subscribers:
+            - 
+                to: RedPlane2
+                name_convert:
+                    -
+                        src_name: PlaneInfo
+                        dst_name: EnemyMessage
+            -
+                to: RedPlane1
+                name_convert:
+                    -
+                        src_name: PlaneInfo
+                        dst_name: EnemyMessage
+    # restart
+    - 
+        from: agent
+        members:
+            - restart
+        subscribers:
+            - 
+                to: RedPlane1
+                name_convert:
+                    - {name: restart}
+            -        
+                to: BluePlane1
+                name_convert:
+                    - {name: restart}
+            - 
+                to: RedPlane2
+                name_convert:
+                    - {name: restart}
+            -        
+                to: BluePlane2
+                name_convert:
+                    - {name: restart}
+        
+    # agent
+    - 
+        from: agent
+        members:
+            - AgentCMD1
+            - AgentCMD2
+            - AgentCMD3
+            - AgentCMD4
+        subscribers:
+            - 
+                to: RedPlane1
+                name_convert:
+                    - {name: AgentCMD1}
+                    - {name: AgentCMD2}
+            - 
+                to: RedPlane2
+                name_convert:
+                    - {name: AgentCMD1}
+                    - {name: AgentCMD2}
+            - 
+                to: BluePlane1
+                name_convert:
+                    - {name: AgentCMD3}
+                    - {name: AgentCMD4}
+            - 
+                to: BluePlane2
+                name_convert:
+                    - {name: AgentCMD3}
+                    - {name: AgentCMD4}
+    - 
+        from: RedPlane1
+        members:
+            - PlaneInfo
+            - TargetMessage
+            - firecontrol
+        subscribers:
+            - 
+                to: agent
+                name_convert:
+                    - {name: PlaneInfo}
+                    - {name: TargetMessage}
+                    - {name: firecontrol}
+    - 
+        from: RedPlane2
+        members:
+            - PlaneInfo
+            - TargetMessage
+            - firecontrol
+        subscribers:
+            - 
+                to: agent
+                name_convert:
+                    - {name: PlaneInfo}
+                    - {name: TargetMessage}
+                    - {name: firecontrol}
+    - 
+        from: BluePlane1
+        members:
+            - PlaneInfo
+            - TargetMessage
+            - firecontrol
+        subscribers:
+            - 
+                to: agent
+                name_convert:
+                    - {name: PlaneInfo}
+                    - {name: TargetMessage}
+                    - {name: firecontrol}
+    - 
+        from: BluePlane2
+        members:
+            - PlaneInfo
+            - TargetMessage
+            - firecontrol
+        subscribers:
+            - 
+                to: agent
+                name_convert:
+                    - {name: PlaneInfo}
+                    - {name: TargetMessage}
+                    - {name: firecontrol}
