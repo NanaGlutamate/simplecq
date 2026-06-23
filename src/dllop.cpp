@@ -2,8 +2,6 @@
 
 #ifdef _WIN32
 #include <Windows.h>
-#include <atlbase.h>
-#include <atlwin.h>
 #else
 #include <dlfcn.h>
 #endif
@@ -13,7 +11,7 @@ std::expected<ModelDllInterface, std::string_view> loadDll(const std::string &dl
 #ifdef _WIN32
     auto hmodule = LoadLibraryExA(dllPath.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 #else  // _WIN32
-    void *hmodule = dlopen(lib_path_.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+    void *hmodule = dlopen(dllPath.c_str(), RTLD_LAZY | RTLD_GLOBAL);
 #endif // _WIN32
     if (!hmodule) {
         return std::unexpected("load dll error");
@@ -34,7 +32,13 @@ std::expected<ModelDllInterface, std::string_view> loadDll(const std::string &dl
 std::string getLibDir() {
     std::string library_dir_;
 #ifdef _WIN32
-    HMODULE module_instance = _AtlBaseModule.GetModuleInstance();
+    HMODULE module_instance = NULL;
+    GetModuleHandleExA(
+        GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        (LPCSTR)&getLibDir, 
+        &module_instance
+    );
+
     char dll_path[MAX_PATH] = {0};
     GetModuleFileNameA(module_instance, dll_path, _countof(dll_path));
     char drive[_MAX_DRIVE];
